@@ -91,7 +91,7 @@ local function get_signal_value(entity, sig)
   if sig then
     signal = sig
   else
-    signal = condition.condition.first_signal
+    signal = condition.first_signal
   end
 
   if signal == nil or signal.name == nil then return(nil)	end

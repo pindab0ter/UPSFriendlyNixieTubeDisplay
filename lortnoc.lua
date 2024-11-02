@@ -52,7 +52,7 @@ local function setStates(nixie, newstates)
       end
       behavior.parameters = parameters
     else
-      game.print("invalid nixie?")
+      log("Invalid nixie: " .. nixie.unit_number)
     end
   end
 end
@@ -136,7 +136,6 @@ end
 local function onPlaceEntity(event)
   local entity = event.created_entity or event.entity
   if not entity.valid then
-    game.print("invalid placement?")
     return
   end
 
@@ -223,18 +222,18 @@ local function onRemoveEntity(event)
     if validNixieNumber[entity.name] then
       removeNixieSprites(entity)
 
-      --if it was a controller, deregister
+      -- If it was a controller, deregister
       if storage.nextNixieController == entity.unit_number then
-        -- if it was the *next* controller, pass it forward...
+        -- If it was the *next* controller, pass it forward...
         if not storage.SNTD_nixieControllers[storage.nextNixieController] then
-          game.print("Invalid next_controller removal??")
-          storage.nextNixieController = nil
+          error("Invalid next_controller removal")
         end
-        storage.nextNixieController = next(storage.SNTD_nixieControllers,storage.nextNixieController)
+
+        storage.nextNixieController = next(storage.SNTD_nixieControllers, storage.nextNixieController)
       end
       storage.SNTD_nixieControllers[entity.unit_number] = nil
 
-      --if I had a next-digit, register it as a controller
+      -- If it had a next-digit, register it as a controller
       local nextDigit = storage.SNTD_nextNixieDigit[entity.unit_number]
       if nextDigit and nextDigit.valid then
         storage.SNTD_nixieControllers[nextDigit.unit_number] = nextDigit
@@ -248,8 +247,8 @@ end
 
 local function onTickController(entity)
   if not entity.valid then
-    onRemoveEntity{entity=entity}
-    game.print("Removed a invalid nixie (you're welcome)")
+    onRemoveEntity { entity = entity }
+    log("Removed invalid nixie: " .. entity.unit_number)
     return
   end
 

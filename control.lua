@@ -54,7 +54,7 @@ local function setStates(nixie, newstates)
       end
       behavior.parameters = parameters
     else
-      game.print("invalid nixie?")
+      log("Invalid nixie: " .. nixie.unit_number)
     end
   end
 end
@@ -132,10 +132,11 @@ end
 
 local function onPlaceEntity(event)
   local entity = event.created_entity or event.entity
+
   if not entity.valid then
-    game.print("invalid placement?")
     return
   end
+
   gizmatize_nixie(entity)
 end
 
@@ -227,10 +228,10 @@ local function onRemoveEntity(entity) --or event
       if storage.nextNixieController == entity.unit_number then
         -- If it was the *next* controller, pass it forward...
         if not storage.SNTD_nixieControllers[storage.nextNixieController] then
-          game.print("Invalid next_controller removal??")
-          storage.nextNixieController = nil
+          error("Invalid next_controller removal")
         end
-        storage.nextNixieController = next(storage.SNTD_nixieControllers, storage.nextNixieController)
+
+        storage.nextNixieController = next(storge.SNTD_nixieControllers, storage.nextNixieController)
       end
       storage.SNTD_nixieControllers[entity.unit_number] = nil
 
@@ -252,7 +253,7 @@ end
 
 local function onTickController(entity)
   if not entity.valid then
-    game.print("Removed an invalid nixie: " .. entity.unit_number)
+    log("Removed invalid nixie: " .. entity.unit_number)
     return
   end
 
@@ -270,11 +271,11 @@ end
 
 local function onTick(event)
   if (settings.global["nixie-update-delay"].value == 0 or event.tick % settings.global["nixie-update-delay"].value == 0) then
-    for k = 1, settings.global["nixie-tube-update-speed"].value do
+    for _ = 1, settings.global["nixie-tube-update-speed"].value do
       local nixie
+
       if storage.nextNixieController and not storage.SNTD_nixieControllers[storage.nextNixieController] then
-        game.print("Invalid next_controller??")
-        storage.nextNixieController = nil
+        error("Invalid next_controller")
       end
 
       storage.nextNixieController, nixie = next(storage.SNTD_nixieControllers, storage.nextNixieController)
@@ -283,7 +284,7 @@ local function onTick(event)
         if nixie.valid then
           onTickController(nixie)
         else
-          game.print("Removing invalid nixie")
+          log("Removing invalid nixie: " .. nixie.unit_number)
           nixie = nil
         end
       else

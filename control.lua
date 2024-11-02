@@ -33,8 +33,8 @@ local sprite_names = {
 
 local function removeNixieSprites(nixie)
 	debugger("removeNixieSprites")
-	if global.SNTD_nixieSprites[nixie.unit_number] ~= nil then
-		for key,sprite in pairs(global.SNTD_nixieSprites[nixie.unit_number]) do
+	if storage.SNTD_nixieSprites[nixie.unit_number] ~= nil then
+		for key,sprite in pairs(storage.SNTD_nixieSprites[nixie.unit_number]) do
 			if sprite.valid then
 				sprite.destroy()
 			end
@@ -50,7 +50,7 @@ local function setStates(nixie, newstates)
     if not new_state then new_state = "off" end
     --game.print("key: "..key.." state: "..new_state)
 
-    local sprite = global.SNTD_nixieSprites[nixie.unit_number][key]
+    local sprite = storage.SNTD_nixieSprites[nixie.unit_number][key]
     if sprite and sprite.valid then
       local behavior = sprite.get_or_create_control_behavior()
       local parameters = behavior.parameters
@@ -127,8 +127,8 @@ local function displayValueString(entity, vs)
 
   if not (entity and entity.valid) then return end
 
-  local nextDigit = global.SNTD_nextNixieDigit[entity.unit_number]
-  local spriteCount = #global.SNTD_nixieSprites[entity.unit_number]
+  local nextDigit = storage.SNTD_nextNixieDigit[entity.unit_number]
+  local spriteCount = #storage.SNTD_nixieSprites[entity.unit_number]
 
   if not vs then
     setStates(entity, (spriteCount==1)and{"off"} or {"off","off"})
@@ -195,7 +195,7 @@ function gizmatize_nixie(entity)
         })
       sprites[n]=sprite
     end
-    global.SNTD_nixieSprites[entity.unit_number] = sprites
+    storage.SNTD_nixieSprites[entity.unit_number] = sprites
     -- game.print("created sprite for entity " .. entity.unit_number)
 
     -- properly reset nixies when (re)added
@@ -213,13 +213,13 @@ function gizmatize_nixie(entity)
     for _,n in pairs(neighbors) do
       if n.valid then
 
-        if global.nextNixieController == n.unit_number then
+        if storage.nextNixieController == n.unit_number then
           -- if it's currently the *next* controller, claim that too...
-          global.nextNixieController = entity.unit_number
+          storage.nextNixieController = entity.unit_number
         end
 
-        global.SNTD_nixieControllers[n.unit_number] = nil
-        global.SNTD_nextNixieDigit[entity.unit_number] = n
+        storage.SNTD_nixieControllers[n.unit_number] = nil
+        storage.SNTD_nextNixieDigit[entity.unit_number] = n
       end
     end
 
@@ -231,15 +231,15 @@ function gizmatize_nixie(entity)
     for _,n in pairs(neighbors) do
       if n.valid then
         foundright=true
-        global.SNTD_nextNixieDigit[n.unit_number] = entity
+        storage.SNTD_nextNixieDigit[n.unit_number] = entity
       end
     end
     if not foundright then
-      global.SNTD_nixieControllers[entity.unit_number] = entity
+      storage.SNTD_nixieControllers[entity.unit_number] = entity
     end
-		--debugger(dump(global.SNTD_nixieControllers))
-		--debugger(dump(global.SNTD_nixieSprites))
-		--debugger(dump(global.SNTD_nextNixieDigit))
+		--debugger(dump(storage.SNTD_nixieControllers))
+		--debugger(dump(storage.SNTD_nixieSprites))
+		--debugger(dump(storage.SNTD_nextNixieDigit))
   end
 
 end
@@ -254,25 +254,25 @@ local function onRemoveEntity(entity) --or event
       removeNixieSprites(entity)
 
       --if it was a controller, deregister
-      if global.nextNixieController == entity.unit_number then
+      if storage.nextNixieController == entity.unit_number then
         -- if it was the *next* controller, pass it forward...
-        if not global.SNTD_nixieControllers[global.nextNixieController] then
+        if not storage.SNTD_nixieControllers[storage.nextNixieController] then
           game.print("Invalid next_controller removal??")
-          global.nextNixieController = nil
+          storage.nextNixieController = nil
         end
-        global.nextNixieController = next(global.SNTD_nixieControllers,global.nextNixieController)
+        storage.nextNixieController = next(storage.SNTD_nixieControllers,storage.nextNixieController)
       end
-      global.SNTD_nixieControllers[entity.unit_number] = nil
+      storage.SNTD_nixieControllers[entity.unit_number] = nil
 
       --if I had a next-digit, register it as a controller
-      local nextDigit = global.SNTD_nextNixieDigit[entity.unit_number]
+      local nextDigit = storage.SNTD_nextNixieDigit[entity.unit_number]
       if nextDigit and nextDigit.valid then
-        global.SNTD_nixieControllers[nextDigit.unit_number] = nextDigit
+        storage.SNTD_nixieControllers[nextDigit.unit_number] = nextDigit
         displayValueString(nextDigit)
       end
 			--clean up
-			global.SNTD_nixieSprites[entity.unit_number] = nil
-			global.SNTD_nextNixieDigit[entity.unit_number] = nil
+			storage.SNTD_nixieSprites[entity.unit_number] = nil
+			storage.SNTD_nextNixieDigit[entity.unit_number] = nil
     end
   end
 end
@@ -307,12 +307,12 @@ local function onTick(event)
 	if (settings.global["nixie-update-delay"].value == 0 or event.tick % settings.global["nixie-update-delay"].value == 0) then
 		for k=1, settings.global["nixie-tube-update-speed"].value do
 			local nixie
-			if global.nextNixieController and not global.SNTD_nixieControllers[global.nextNixieController] then
+			if storage.nextNixieController and not storage.SNTD_nixieControllers[storage.nextNixieController] then
 				 game.print("Invalid next_controller??")
-				global.nextNixieController = nil
+				storage.nextNixieController = nil
 			end
 
-			global.nextNixieController, nixie = next(global.SNTD_nixieControllers, global.nextNixieController)
+			storage.nextNixieController, nixie = next(storage.SNTD_nixieControllers, storage.nextNixieController)
 			if nixie then
 				if nixie.valid then
 					onTickController(nixie)
@@ -329,9 +329,9 @@ end
 
 local function regizmatize_nixies()
 	game.print("Nixie: regizmatizing nixie tubes")
-  global.SNTD_nixieControllers = {}
-  global.SNTD_nixieSprites = {}
-  global.SNTD_nextNixieDigit = {}
+  storage.SNTD_nixieControllers = {}
+  storage.SNTD_nixieSprites = {}
+  storage.SNTD_nextNixieDigit = {}
 	
 	for _,surface in pairs(game.surfaces) do
 		for _,sprite_name in pairs(sprite_names) do
@@ -360,9 +360,9 @@ end)
 
 script.on_init(function()
 	debugger("DEBUG on_init")
-  global.SNTD_nixieControllers = {}
-  global.SNTD_nixieSprites = {}
-  global.SNTD_nextNixieDigit = {}
+  storage.SNTD_nixieControllers = {}
+  storage.SNTD_nixieSprites = {}
+  storage.SNTD_nextNixieDigit = {}
 end)
 
 script.on_event({defines.events.on_built_entity,

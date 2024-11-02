@@ -59,7 +59,7 @@ local function setStates(nixie, newstates)
   end
 end
 
-local function get_signal_value(entity, sig)
+local function get_signal_value(entity)
   local behavior = entity.get_control_behavior()
   if behavior == nil then return nil end
 
@@ -67,65 +67,69 @@ local function get_signal_value(entity, sig)
   if condition == nil then return nil end
 
   -- shortcut, return stored value if unchanged
-  if not sig and condition.fulfilled and condition.comparator == "=" then
-    return condition.constant, false
-  end
+  -- TODO: Use storage instead of this entity's signal constant
+  -- if not sig and condition.fulfilled and condition.comparator == "=" then
+  --   return condition.constant, false
+  -- end
 
   -- get the variable to display; return if none selected
   local signal
-  if sig then
-    signal = sig
-  else
-    signal = condition.first_signal
-  end
+  signal = condition.first_signal
 
   if signal == nil or signal.name == nil then return (nil) end
 
   -- check both wires of the variable
-  local redval, greenval = 0, 0
-  local network = entity.get_circuit_network(defines.wire_type.red)
-  if network then
-    redval = network.get_signal(signal)
-  end
-  network = entity.get_circuit_network(defines.wire_type.green)
-  if network then
-    greenval = network.get_signal(signal)
+  local redCircuitValue = 0
+  local redCircuitNetwork = entity.get_circuit_network(defines.wire_type.red)
+  if redCircuitNetwork then
+    redCircuitValue = redCircuitNetwork.get_signal(signal)
   end
 
-  local val = redval + greenval
-
-  -- If no signal has been set, make sure to init condition
-  if not sig then
-    condition.comparator = "="
-    condition.constant = val
-    condition.second_signal = nil
-    behavior.circuit_condition = condition
+  local greenCircuitvalue = 0
+  local greenCircuitNetwork = entity.get_circuit_network(defines.wire_type.green)
+  if greenCircuitNetwork then
+    greenCircuitvalue = greenCircuitNetwork.get_signal(signal)
   end
 
-  return val, true
+  local circuitTotal = redCircuitValue + greenCircuitvalue
+
+  return circuitTotal, true
 end
 
 
-
-local function displayValueString(entity, vs)
+--- Display the value on the nixie tube
+local function displayValueString(entity, valueString, enabled)
   if not (entity and entity.valid) then return end
+
+  -- Check if the nixie is enabled and pass it on to the next digit
+  if (enabled == nil) then
+    enabled = false
+    local behavior = entity.get_control_behavior()
+    if behavior and behavior.circuit_condition and behavior.circuit_condition.fulfilled then
+      enabled = true
+    end
+  end
 
   local nextDigit = storage.SNTD_nextNixieDigit[entity.unit_number]
   local spriteCount = #storage.SNTD_nixieSprites[entity.unit_number]
 
-  if not vs then
+  if (not valueString) or (not enabled) then
+    -- Set both this digit and the next digit to 'off'
     setStates(entity, (spriteCount == 1) and { "off" } or { "off", "off" })
-  elseif #vs < spriteCount then
-    setStates(entity, { "off", vs })
-  elseif #vs >= spriteCount then
-    setStates(entity, (spriteCount == 1) and { vs:sub(-1) } or { vs:sub(-2, -2), vs:sub(-1) })
+  elseif #valueString < spriteCount then
+    -- Set this digit to the value, and the next digit to 'off'
+    setStates(entity, { "off", valueString })
+  elseif #valueString >= spriteCount then
+    -- Set this digit and pass the rest to the next digit
+    setStates(entity, (spriteCount == 1) and { valueString:sub(-1) } or { valueString:sub(-2, -2), valueString:sub(-1) })
   end
 
   if nextDigit then
-    if vs and #vs > spriteCount then
-      displayValueString(nextDigit, vs:sub(1, -(spriteCount + 1)))
+    if valueString and (#valueString > spriteCount) and enabled then
+      displayValueString(nextDigit, valueString:sub(1, -(spriteCount + 1)), enabled)
     else
-      displayValueString(nextDigit) -- Set next digit to 'off'
+      -- Set next digit to 'off'
+      displayValueString(nextDigit, nil, enabled)
     end
   end
 end
@@ -258,6 +262,7 @@ local function onTickController(entity)
   end
 
   local value, value_changed = get_signal_value(entity)
+
   if value then
     if value_changed then
       local format = "%i"

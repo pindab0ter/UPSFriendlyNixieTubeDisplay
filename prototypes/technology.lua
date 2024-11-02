@@ -20,7 +20,6 @@ data:extend({
         recipe = "SNTD-old-nixie-tube"
       },
     },
-    -- TODO: Figure out why `.order` is not working
     order = (data.raw["technology"]["circuit-network"].order or "") .. "[SNTD]-a[regular]"
   },
   {

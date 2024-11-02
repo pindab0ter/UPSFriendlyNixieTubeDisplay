@@ -81,7 +81,7 @@ local SNTD_nixie_tube_entity = {
     type = "electric",
     usage_priority = "secondary-input",
   },
-  energy_usage_per_tick = "4KW",
+  energy_usage_per_tick = "4kW",
   light = { intensity = 0.0, size = 0, color = { r = 1, g = .6, b = .3, a = 0 } },
   resistances = {
     {

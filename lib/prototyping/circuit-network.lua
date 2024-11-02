@@ -1,6 +1,14 @@
 
 if circuit_connector_definitions and (not circuit_connector_definitions.create_scaled) then
 
+  -- Ensure circuit_connector_definitions.create is defined
+  if not circuit_connector_definitions.create then
+    circuit_connector_definitions.create = function(template, definitions)
+      -- Placeholder implementation
+      return { sprites = {}, points = {} }
+    end
+  end
+
   circuit_connector_definitions.create_scaled = function(template, definitions, scale)
     -- create unscaled version
     local created_definition = circuit_connector_definitions.create(template, definitions)
@@ -22,8 +30,12 @@ if circuit_connector_definitions and (not circuit_connector_definitions.create_s
       } do
         if created_definition.sprites[spriteName] then
           created_definition.sprites[spriteName].scale = (created_definition.sprites[spriteName].scale or 1) * scale
-          for axis, value in pairs(created_definition.sprites[spriteName].shift) do
-            created_definition.sprites[spriteName].shift[axis] = value * scale
+          if created_definition.sprites[spriteName].shift then
+            for axis, value in pairs(created_definition.sprites[spriteName].shift) do
+              created_definition.sprites[spriteName].shift[axis] = value * scale
+            end
+          else
+            created_definition.sprites[spriteName].shift = {x = 0, y = 0}
           end
         end
       end

@@ -20,7 +20,8 @@ data:extend({
         recipe = "SNTD-old-nixie-tube"
       },
     },
-    order = data.raw["technology"]["circuit-network"].order .. "[SNTD]-a[regular]"
+    -- TODO: Figure out why `.order` is not working
+    order = (data.raw["technology"]["circuit-network"].order or "") .. "[SNTD]-a[regular]"
   },
   {
     type = "technology",
@@ -45,6 +46,6 @@ data:extend({
         recipe = "SNTD-nixie-tube-small"
       }
     },
-    order = data.raw["technology"]["circuit-network"].order .. "[SNTD]-b[reinforced]"
+    order = (data.raw["technology"]["circuit-network"].order or "") .. "[SNTD]-b[reinforced]"
   }
 })

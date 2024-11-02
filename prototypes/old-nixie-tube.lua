@@ -42,20 +42,22 @@ local SNTD_old_nixie_tube_recipe =
 {
   type = "recipe",
   name = "SNTD-old-nixie-tube",
-  enabled = "false",
+  enabled = false,
   energy_required = 3,
   ingredients = {
-    {"electronic-circuit", 1},
-    {"iron-plate", 2},
-    {"copper-cable", 10},
+    {type = "item", name = "electronic-circuit", amount = 1},
+    {type = "item", name = "iron-plate", amount = 2},
+    {type = "item", name = "copper-cable", amount = 10},
   },
-  result = "SNTD-old-nixie-tube"
+  results = {
+    {type = "item", name = "SNTD-old-nixie-tube", amount = 1}
+  },
 }
 
 local SNTD_old_nixie_tube_item =
 {
   type = "item",
-  name = SNTD_old_nixie_tube_recipe.result,
+  name = SNTD_old_nixie_tube_recipe.name,
   icon = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube-icon.png",
   icon_size = 32,
   --flags = {},
@@ -83,7 +85,7 @@ local SNTD_old_nixie_tube_entity =
     type = "electric",
     usage_priority = "secondary-input",
   },
-  energy_usage_per_tick = "4KW",
+  energy_usage_per_tick = "4kW",
   light = {intensity = 0.0, size = 0, color = {r=1, g=.6, b=.3, a=0}},
   resistances =
   {

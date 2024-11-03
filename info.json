@@ -6,6 +6,11 @@
   "author": "Red_Wizard",
   "contact": "",
   "homepage": "",
-  "description": "Fork of Santa's Nixie Tubes.  Adds options to make it more UPS friendly.",
-  "dependencies": ["base >= 2.0", "! SantasNixieTubeDisplay", "! nixie-tubes"]
+  "description": "Fork of Santa's Nixie Tubes. Adds options to make it more UPS friendly.",
+  "dependencies": [
+    "base >= 2.0.0",
+    "flib >= 0.15.0",
+    "! SantasNixieTubeDisplay",
+    "! nixie-tubes"
+  ]
 }

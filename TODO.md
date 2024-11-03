@@ -1,0 +1,3 @@
+- [ ] Improve sprite resolution
+- [ ] Create custom GUI
+- [ ] Fix circuit connections

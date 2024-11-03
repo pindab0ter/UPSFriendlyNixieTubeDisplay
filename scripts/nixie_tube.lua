@@ -1,3 +1,5 @@
+local gui = require("__flib__.gui")
+
 local stateDisplay = {
     ["off"] = "*", -- default
 
@@ -322,31 +324,343 @@ local function regizmatize_nixies()
     end
 end
 
-local nixie_tube = {}
+--- @param player_index uint
+local function destroy_gui(player_index)
+    local self = storage.nixie_tube_gui[player_index]
+    if not self then
+        return
+    end
+    storage.nixie_tube_gui[player_index] = nil
+    local window = self.elems.nt_infinity_accumulator_window
+    if not window.valid then
+        return
+    end
+    window.destroy()
+end
 
-nixie_tube.on_init = function()
+--- @param self InfinityAccumulatorGui
+--- @param new_entity LuaEntity?
+local function update_gui(self, new_entity)
+    if not new_entity and not self.entity.valid then
+        destroy_gui(self.player.index)
+        return
+    end
+    if new_entity then
+        self.elems.entity_preview.entity = new_entity
+        self.entity = new_entity
+    end
+
+    -- local entity = self.entity
+    -- local priority = "primary"
+    -- local mode = "output"
+
+    -- local mode_dropdown = self.elems.mode_dropdown
+    -- mode_dropdown.selected_index = table.find(modes, mode) --[[@as uint]]
+
+    -- local priority_dropdown = self.elems.priority_dropdown
+    -- priority_dropdown.selected_index = table.find(priorities, priority) --[[@as uint]]
+    -- priority_dropdown.enabled = mode ~= "buffer"
+
+    -- local slider_value, dropdown_index = get_slider_values(entity.electric_buffer_size, mode)
+
+    -- local power_slider = self.elems.power_slider
+    -- power_slider.slider_value = slider_value
+    -- local textfield = self.elems.power_textfield
+    -- textfield.text = tostring(slider_value)
+    -- local dropdown = self.elems.power_dropdown
+    -- if mode == "buffer" then
+    --     dropdown.items = si_suffixes_joule
+    -- else
+    --     dropdown.items = si_suffixes_watt
+    -- end
+    -- dropdown.selected_index = dropdown_index
+end
+
+local handlers = {
+    --- @param self InfinityAccumulatorGui
+    --- @param e EventData.on_gui_closed|EventData.on_gui_click
+    on_nt_gui_closed = function(self, e)
+        -- destroy_gui(e.player_index)
+        -- local player = self.player
+        -- if not player.valid then
+        --     return
+        -- end
+        -- player.play_sound({ path = "entity-close/ee-infinity-accumulator-tertiary-buffer" })
+    end,
+
+    --- @param self InfinityAccumulatorGui
+    --- @param e EventData.on_gui_selection_state_changed
+    on_nt_gui_mode_dropdown_changed = function(self, e)
+        -- local entity = self.entity
+        -- local mode = modes[e.element.selected_index]
+        -- local priority = "tertiary"
+        -- if mode ~= "buffer" then
+        --     priority = get_settings_from_name(entity.name)
+        -- end
+        -- local new_entity = change_entity(entity, priority, mode)
+        -- if not new_entity then
+        --     return
+        -- end
+        -- update_all_guis(new_entity)
+    end,
+
+    --- @param self InfinityAccumulatorGui
+    --- @param e EventData.on_gui_selection_state_changed
+    on_nt_gui_priority_dropdown_changed = function(self, e)
+        -- local entity = self.entity
+        -- local priority = priorities[e.element.selected_index]
+        -- local _, mode = get_settings_from_name(entity.name)
+        -- local new_entity = change_entity(entity, priority, mode)
+        -- if not new_entity then
+        --     return
+        -- end
+        -- update_all_guis(new_entity)
+    end,
+
+    --- @param self InfinityAccumulatorGui
+    --- @param e EventData.on_gui_selection_state_changed
+    on_nt_gui_power_slider_changed = function(self, e)
+        -- local entity = self.entity
+        -- local slider_value = e.element.slider_value
+        -- local dropdown_index = self.elems.power_dropdown.selected_index
+        -- local buffer_size = calc_buffer_size(slider_value, dropdown_index)
+        -- local _, mode = get_settings_from_name(entity.name)
+        -- set_entity_settings(entity, mode, buffer_size)
+        -- update_all_guis(entity)
+    end,
+
+    --- @param self InfinityAccumulatorGui
+    --- @param e EventData.on_gui_text_changed
+    on_nt_gui_power_textfield_changed = function(self, e)
+        -- local entity = self.entity
+        -- local textfield = e.element
+        -- local text = textfield.text
+        -- local value = tonumber(text)
+        -- if not value or value < 0 or value >= 1000 then
+        -- textfield.style = "nt_invalid_slider_textfield"
+        -- return
+        -- end
+        -- textfield.style = "nt_slider_textfield"
+        -- if string.sub(text, #text) == "." then
+            -- return
+        -- end
+
+        -- self.elems.power_slider.slider_value = value
+
+        -- local _, mode = get_settings_from_name(entity.name)
+        -- local buffer_size = calc_buffer_size(value, self.elems.power_dropdown.selected_index)
+        -- set_entity_settings(entity, mode, buffer_size)
+        -- update_all_guis(entity)
+    end,
+
+    --- @param self InfinityAccumulatorGui
+    --- @param e EventData.on_gui_selection_state_changed
+    on_nt_gui_power_dropdown_changed = function(self, e)
+        -- local entity = self.entity
+        -- local _, mode = get_settings_from_name(entity.name)
+        -- local buffer_size = calc_buffer_size(self.elems.power_slider.slider_value, e.element.selected_index)
+        -- set_entity_settings(entity, mode, buffer_size)
+        -- update_all_guis(entity)
+    end,
+}
+
+gui.add_handlers(handlers, function(e, handler)
+    local self = storage.infinity_accumulator_gui[e.player_index]
+    if not self then
+        return
+    end
+    if not self.entity.valid then
+        return
+    end
+
+    handler(self, e)
+end)
+
+
+--- @param player LuaPlayer
+--- @param entity LuaEntity
+local function create_gui(player, entity)
+    destroy_gui(player.index)
+
+    local elems = gui.add(player.gui.screen, {
+        type = "frame",
+        name = "nt_nixie_tube_window",
+        direction = "vertical",
+        elem_mods = { auto_center = true },
+        handler = { [defines.events.on_gui_closed] = handlers.on_nt_gui_closed },
+        {
+            type = "flow",
+            style = "flib_titlebar_flow",
+            drag_target = "nt_nixie_tube_window",
+            {
+                type = "label",
+                style = "flib_frame_title",
+                caption = "TITLE BAR",
+                -- caption = { "entity-name.ee-infinity-accumulator" },
+                ignored_by_interaction = true,
+            },
+            { type = "empty-widget", style = "flib_titlebar_drag_handle", ignored_by_interaction = true },
+            {
+                type = "sprite-button",
+                style = "frame_action_button",
+                sprite = "utility/close",
+                -- hovered_sprite = "utility/close_black",
+                -- clicked_sprite = "utility/close_black",
+                tooltip = { "gui.close-instruction" },
+                mouse_button_filter = { "left" },
+                handler = { [defines.events.on_gui_click] = handlers.on_nt_gui_closed },
+            }
+        },
+        {
+            type = "frame",
+            style = "entity_frame",
+            direction = "vertical",
+            {
+                type = "frame",
+                style = "deep_frame_in_shallow_frame",
+                {
+                    type = "entity-preview",
+                    name = "entity_preview",
+                    style = "wide_entity_button",
+                    elem_mods = { entity = entity },
+                },
+            },
+            -- {
+            --     type = "flow",
+            --     style_mods = { top_margin = 4, vertical_align = "center" },
+            --     { type = "label",        caption = { "gui.ee-mode" } },
+            --     { type = "empty-widget", style = "flib_horizontal_pusher", ignored_by_interaction = true },
+            --     {
+            --         type = "drop-down",
+            --         name = "mode_dropdown",
+            --         items = { { "gui.ee-output" }, { "gui.ee-input" }, { "gui.ee-buffer" } },
+            --         selected_index = 0,
+            --         handler = {
+            --             [defines.events.on_gui_selection_state_changed] = handlers.on_nt_gui_mode_dropdown_changed,
+            --         },
+            --     },
+            -- },
+            -- { type = "line", direction = "horizontal" },
+            -- {
+            --     type = "flow",
+            --     style_mods = { vertical_align = "center" },
+            --     {
+            --         type = "label",
+            --         caption = { "", { "gui.ee-priority" }, " [img=info]" },
+            --         tooltip = { "gui.ee-ia-priority-description" },
+            --     },
+            --     { type = "empty-widget", style = "flib_horizontal_pusher", ignored_by_interaction = true },
+            --     {
+            --         type = "drop-down",
+            --         name = "priority_dropdown",
+            --         items = { { "gui.ee-primary" }, { "gui.ee-secondary" }, { "gui.ee-tertiary" } },
+            --         selected_index = 0,
+            --         handler = {
+            --             [defines.events.on_gui_selection_state_changed] = handlers.on_nt_gui_priority_dropdown_changed,
+            --         },
+            --     },
+            -- },
+            -- { type = "line", direction = "horizontal" },
+            -- {
+            --     type = "flow",
+            --     style_mods = { vertical_align = "center" },
+            --     {
+            --         type = "label",
+            --         style_mods = { right_margin = 6 },
+            --         caption = { "gui.ee-power" },
+            --     },
+            --     {
+            --         type = "slider",
+            --         name = "power_slider",
+            --         style_mods = { horizontally_stretchable = true },
+            --         minimum_value = 0,
+            --         maximum_value = 999,
+            --         value = 0,
+            --         handler = { [defines.events.on_gui_value_changed] = handlers.on_nt_gui_power_slider_changed },
+            --     },
+            --     {
+            --         type = "textfield",
+            --         name = "power_textfield",
+            --         style = "nt_slider_textfield",
+            --         text = "",
+            --         numeric = true,
+            --         allow_decimal = true,
+            --         clear_and_focus_on_right_click = true,
+            --         handler = { [defines.events.on_gui_text_changed] = handlers.on_nt_gui_power_textfield_changed },
+            --     },
+            --     {
+            --         type = "drop-down",
+            --         name = "power_dropdown",
+            --         style_mods = { width = 69 },
+            --         selected_index = 0,
+            --         handler = {
+            --             [defines.events.on_gui_selection_state_changed] = handlers.on_nt_gui_power_dropdown_changed,
+            --         },
+            --     },
+            -- },
+        },
+    })
+
+    player.opened = elems.nt_infinity_accumulator_window
+
+    --- @class NixieTubeGui
+    local self = {
+        elems = elems,
+        entity = entity,
+        player = player,
+    }
+    storage.nixie_tube_gui[player.index] = self
+
+    update_gui(self)
+end
+
+--- @param e EventData.on_gui_opened
+local function on_gui_opened(e)
+    if e.gui_type ~= defines.gui_type.entity then
+        return
+    end
+    local entity = e.entity
+    if not entity or not entity.valid then
+        return
+    end
+    local player = game.get_player(e.player_index)
+    if not player then
+        return
+    end
+
+    create_gui(player, entity)
+end
+
+script.on_configuration_changed(function()
+    regizmatize_nixies()
+end)
+
+script.on_init(function()
     storage.SNTD_nixieControllers = {}
     storage.SNTD_nixieSprites = {}
     storage.SNTD_nextNixieDigit = {}
-    regizmatize_nixies()
-end
 
-nixie_tube.on_configuration_changed = function()
+    --- @type table<uinteger, NixieTubeGui>
+    storage.nixie_tube_gui = {}
     regizmatize_nixies()
-end
+end)
+
+script.on_event(defines.events.on_tick, on_tick)
+
+local nixie_tube = {}
 
 nixie_tube.events = {
-    [defines.events.on_built_entity] = on_place_entity,
+    [defines.events.on_gui_opened] = on_gui_opened,
+
+    [defines.events.on_entity_died] = on_remove_entity,
+    [defines.events.on_pre_player_mined_item] = on_remove_entity,
     [defines.events.on_robot_built_entity] = on_place_entity,
+    [defines.events.on_robot_pre_mined] = on_remove_entity,
+
+    [defines.events.on_built_entity] = on_place_entity,
     [defines.events.script_raised_revive] = on_place_entity,
     [defines.events.script_raised_built] = on_place_entity,
-
-    [defines.events.on_pre_player_mined_item] = on_remove_entity,
-    [defines.events.on_robot_pre_mined] = on_remove_entity,
-    [defines.events.on_entity_died] = on_remove_entity,
     [defines.events.script_raised_destroy] = on_remove_entity,
-
-    [defines.events.on_tick] = on_tick
 }
 
 return nixie_tube

@@ -442,7 +442,7 @@ local handlers = {
         -- end
         -- textfield.style = "nt_slider_textfield"
         -- if string.sub(text, #text) == "." then
-            -- return
+        -- return
         -- end
 
         -- self.elems.power_slider.slider_value = value
@@ -495,8 +495,7 @@ local function create_gui(player, entity)
             {
                 type = "label",
                 style = "flib_frame_title",
-                caption = "TITLE BAR",
-                -- caption = { "entity-name.ee-infinity-accumulator" },
+                caption = "Nixie Tube",
                 ignored_by_interaction = true,
             },
             { type = "empty-widget", style = "flib_titlebar_drag_handle", ignored_by_interaction = true },
@@ -504,8 +503,6 @@ local function create_gui(player, entity)
                 type = "sprite-button",
                 style = "frame_action_button",
                 sprite = "utility/close",
-                -- hovered_sprite = "utility/close_black",
-                -- clicked_sprite = "utility/close_black",
                 tooltip = { "gui.close-instruction" },
                 mouse_button_filter = { "left" },
                 handler = { [defines.events.on_gui_click] = handlers.on_nt_gui_closed },
@@ -525,11 +522,20 @@ local function create_gui(player, entity)
                     elem_mods = { entity = entity },
                 },
             },
-            -- {
-            --     type = "flow",
-            --     style_mods = { top_margin = 4, vertical_align = "center" },
-            --     { type = "label",        caption = { "gui.ee-mode" } },
-            --     { type = "empty-widget", style = "flib_horizontal_pusher", ignored_by_interaction = true },
+            {
+                type = "flow",
+                style_mods = { top_margin = 4, vertical_align = "center" },
+                {
+                    type = "label",
+                    caption = "Signal"
+                },
+                {
+                    type = "choose-elem-button",
+                    elem_type = "signal",
+                },
+            },
+            --  {
+            --    { type = "empty-widget", style = "flib_horizontal_pusher", ignored_by_interaction = true },
             --     {
             --         type = "drop-down",
             --         name = "mode_dropdown",

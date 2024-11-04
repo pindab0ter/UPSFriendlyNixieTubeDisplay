@@ -1,3 +1,6 @@
 - [ ] Improve sprite resolution
 - [ ] Create custom GUI
+  - [x] Get proof of concept working
+  - [ ] Create front end
+  - [ ] Handle GUI interactions
 - [ ] Fix circuit connections

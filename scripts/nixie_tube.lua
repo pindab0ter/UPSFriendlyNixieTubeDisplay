@@ -1,6 +1,6 @@
 local gui = require("__flib__.gui")
 
-local stateDisplay = {
+local state_display = {
     ["off"] = "*", -- default
 
     ["0"] = "+",
@@ -15,10 +15,16 @@ local stateDisplay = {
     ["9"] = "XOR"
 }
 
-local validNixieNumber = {
+local valid_nixie_number = {
     ['SNTD-old-nixie-tube'] = 1,
     ['SNTD-nixie-tube'] = 1,
     ['SNTD-nixie-tube-small'] = 2
+}
+
+local entity_names = {
+    ['SNTD-old-nixie-tube'] = true,
+    ['SNTD-nixie-tube'] = true,
+    ['SNTD-nixie-tube-small'] = true
 }
 
 local sprite_names = {
@@ -48,10 +54,10 @@ local function setStates(nixie, newstates)
             local parameters = behavior.parameters
             if nixie.energy >= 50 then
                 -- new_state is a string of the new state (see stateDisplay)
-                parameters.operation = stateDisplay[new_state]
+                parameters.operation = state_display[new_state]
             else
-                if parameters.operation ~= stateDisplay["off"] then
-                    parameters.operation = stateDisplay["off"]
+                if parameters.operation ~= state_display["off"] then
+                    parameters.operation = state_display["off"]
                 end
             end
             behavior.parameters = parameters
@@ -149,7 +155,7 @@ local function on_place_entity(event)
 end
 
 function gizmatize_nixie(entity)
-    local num = validNixieNumber[entity.name]
+    local num = valid_nixie_number[entity.name]
 
     if num then
         local pos = entity.position
@@ -225,38 +231,6 @@ function gizmatize_nixie(entity)
     end
 end
 
-local function on_remove_entity(entity) --or event
-    entity = entity.entity
-
-    if entity.valid then
-        if validNixieNumber[entity.name] then
-            remove_nixie_sprites(entity)
-
-            -- If it was a controller, deregister
-            if storage.nextNixieController == entity.unit_number then
-                -- If it was the *next* controller, pass it forward...
-                if not storage.SNTD_nixieControllers[storage.nextNixieController] then
-                    error("Invalid next_controller removal")
-                end
-
-                storage.nextNixieController = next(storge.SNTD_nixieControllers, storage.nextNixieController)
-            end
-            storage.SNTD_nixieControllers[entity.unit_number] = nil
-
-            -- If it had a next-digit, register it as a controller
-            local nextDigit = storage.SNTD_nextNixieDigit[entity.unit_number]
-            if nextDigit and nextDigit.valid then
-                storage.SNTD_nixieControllers[nextDigit.unit_number] = nextDigit
-                displayValueString(nextDigit)
-            end
-
-            -- Clean up
-            storage.SNTD_nixieSprites[entity.unit_number] = nil
-            storage.SNTD_nextNixieDigit[entity.unit_number] = nil
-        end
-    end
-end
-
 local function on_tick_controller(entity)
     if not entity.valid then
         log("Removed invalid nixie: " .. entity.unit_number)
@@ -315,7 +289,7 @@ local function regizmatize_nixies()
             end
         end
 
-        for nixie_name, _ in pairs(validNixieNumber) do
+        for nixie_name, _ in pairs(valid_nixie_number) do
             local entities = surface.find_entities_filtered { name = nixie_name }
             for _, entity in pairs(entities) do
                 gizmatize_nixie(entity);
@@ -330,21 +304,25 @@ local function destroy_gui(player_index)
     if not self then
         return
     end
+
     storage.nixie_tube_gui[player_index] = nil
-    local window = self.elems.nt_infinity_accumulator_window
+
+    local window = self.elems.nt_nixie_tube_window
     if not window.valid then
         return
     end
+
     window.destroy()
 end
 
---- @param self InfinityAccumulatorGui
+--- @param self NixieTubeGui
 --- @param new_entity LuaEntity?
 local function update_gui(self, new_entity)
     if not new_entity and not self.entity.valid then
         destroy_gui(self.player.index)
         return
     end
+
     if new_entity then
         self.elems.entity_preview.entity = new_entity
         self.entity = new_entity
@@ -353,12 +331,12 @@ local function update_gui(self, new_entity)
     -- local entity = self.entity
     -- local priority = "primary"
     -- local mode = "output"
-
+    --
     -- local mode_dropdown = self.elems.mode_dropdown
     -- mode_dropdown.selected_index = table.find(modes, mode) --[[@as uint]]
 
     -- local priority_dropdown = self.elems.priority_dropdown
-    -- priority_dropdown.selected_index = table.find(priorities, priority) --[[@as uint]]
+    -- priority_dropdown.selected_index = table.find(priorities, priority) -]
     -- priority_dropdown.enabled = mode ~= "buffer"
 
     -- local slider_value, dropdown_index = get_slider_values(entity.electric_buffer_size, mode)
@@ -376,102 +354,55 @@ local function update_gui(self, new_entity)
     -- dropdown.selected_index = dropdown_index
 end
 
+--- @param entity LuaEntity
+local function update_all_guis(entity)
+    for _, gui in pairs(storage.nixie_tube_gui) do
+        if not gui.entity.valid or gui.entity == entity then
+            update_gui(gui, entity)
+        end
+    end
+end
+
 local handlers = {
-    --- @param self InfinityAccumulatorGui
+    --- @param self NixieTubeGui
     --- @param e EventData.on_gui_closed|EventData.on_gui_click
     on_nt_gui_closed = function(self, e)
-        -- destroy_gui(e.player_index)
-        -- local player = self.player
-        -- if not player.valid then
-        --     return
-        -- end
+        destroy_gui(e.player_index)
+
+        local player = self.player
+        if not player.valid then
+            return
+        end
         -- player.play_sound({ path = "entity-close/ee-infinity-accumulator-tertiary-buffer" })
     end,
 
-    --- @param self InfinityAccumulatorGui
     --- @param e EventData.on_gui_selection_state_changed
-    on_nt_gui_mode_dropdown_changed = function(self, e)
-        -- local entity = self.entity
-        -- local mode = modes[e.element.selected_index]
-        -- local priority = "tertiary"
-        -- if mode ~= "buffer" then
-        --     priority = get_settings_from_name(entity.name)
-        -- end
-        -- local new_entity = change_entity(entity, priority, mode)
-        -- if not new_entity then
-        --     return
-        -- end
-        -- update_all_guis(new_entity)
-    end,
+    on_nt_gui_choose_elem_changed = function(self, e)
+        log("Changing signal with event " .. (serpent.block(e.name)))
 
-    --- @param self InfinityAccumulatorGui
-    --- @param e EventData.on_gui_selection_state_changed
-    on_nt_gui_priority_dropdown_changed = function(self, e)
-        -- local entity = self.entity
-        -- local priority = priorities[e.element.selected_index]
-        -- local _, mode = get_settings_from_name(entity.name)
-        -- local new_entity = change_entity(entity, priority, mode)
-        -- if not new_entity then
-        --     return
-        -- end
-        -- update_all_guis(new_entity)
-    end,
+        local entity = self.entity
 
-    --- @param self InfinityAccumulatorGui
-    --- @param e EventData.on_gui_selection_state_changed
-    on_nt_gui_power_slider_changed = function(self, e)
-        -- local entity = self.entity
-        -- local slider_value = e.element.slider_value
-        -- local dropdown_index = self.elems.power_dropdown.selected_index
-        -- local buffer_size = calc_buffer_size(slider_value, dropdown_index)
-        -- local _, mode = get_settings_from_name(entity.name)
-        -- set_entity_settings(entity, mode, buffer_size)
-        -- update_all_guis(entity)
-    end,
+        local signal = e.element.elem_value
+        if not signal then
+            return
+        end
 
-    --- @param self InfinityAccumulatorGui
-    --- @param e EventData.on_gui_text_changed
-    on_nt_gui_power_textfield_changed = function(self, e)
-        -- local entity = self.entity
-        -- local textfield = e.element
-        -- local text = textfield.text
-        -- local value = tonumber(text)
-        -- if not value or value < 0 or value >= 1000 then
-        -- textfield.style = "nt_invalid_slider_textfield"
-        -- return
-        -- end
-        -- textfield.style = "nt_slider_textfield"
-        -- if string.sub(text, #text) == "." then
-        -- return
-        -- end
+        log("Signal: " .. signal.name)
 
-        -- self.elems.power_slider.slider_value = value
+        -- local behavior = entity.get_or_create_control_behavior()
+        -- local conditin = behavior.circuit_condition
+        -- condition.first_signal = signal
+        -- behavior.circuit_condition = condition
 
-        -- local _, mode = get_settings_from_name(entity.name)
-        -- local buffer_size = calc_buffer_size(value, self.elems.power_dropdown.selected_index)
-        -- set_entity_settings(entity, mode, buffer_size)
-        -- update_all_guis(entity)
-    end,
-
-    --- @param self InfinityAccumulatorGui
-    --- @param e EventData.on_gui_selection_state_changed
-    on_nt_gui_power_dropdown_changed = function(self, e)
-        -- local entity = self.entity
-        -- local _, mode = get_settings_from_name(entity.name)
-        -- local buffer_size = calc_buffer_size(self.elems.power_slider.slider_value, e.element.selected_index)
-        -- set_entity_settings(entity, mode, buffer_size)
-        -- update_all_guis(entity)
+        -- displayValueString(entity)
+        update_all_guis(entity)
     end,
 }
 
 gui.add_handlers(handlers, function(e, handler)
-    local self = storage.infinity_accumulator_gui[e.player_index]
-    if not self then
-        return
-    end
-    if not self.entity.valid then
-        return
-    end
+    local self = storage.nixie_tube_gui[e.player_index]
+    if not self then return end
+    if not self.entity.valid then return end
 
     handler(self, e)
 end)
@@ -532,6 +463,9 @@ local function create_gui(player, entity)
                 {
                     type = "choose-elem-button",
                     elem_type = "signal",
+                    handler = {
+                        [defines.events.on_gui_elem_changed] = handlers.on_nt_gui_choose_elem_changed,
+                    },
                 },
             },
             --  {
@@ -607,7 +541,7 @@ local function create_gui(player, entity)
         },
     })
 
-    player.opened = elems.nt_infinity_accumulator_window
+    player.opened = elems.nt_nixie_tube_window
 
     --- @class NixieTubeGui
     local self = {
@@ -615,6 +549,7 @@ local function create_gui(player, entity)
         entity = entity,
         player = player,
     }
+
     storage.nixie_tube_gui[player.index] = self
 
     update_gui(self)
@@ -625,16 +560,53 @@ local function on_gui_opened(e)
     if e.gui_type ~= defines.gui_type.entity then
         return
     end
+
     local entity = e.entity
-    if not entity or not entity.valid then
-        return
-    end
+    if not entity or not entity.valid or not entity_names[entity.name] then return end
+
     local player = game.get_player(e.player_index)
-    if not player then
+    if not player then return end
+
+    create_gui(player, entity)
+end
+
+--- @param e DestroyedEvent
+local function on_entity_destroyed(e)
+    local entity = e.entity
+    if not entity.valid or not entity_names[entity.name] then
         return
     end
 
-    create_gui(player, entity)
+    for player_index, gui in pairs(storage.nixie_tube_gui) do
+        if gui.entity == entity then
+            destroy_gui(player_index)
+        end
+    end
+end
+
+--- @param e EventData.on_entity_settings_pasted
+local function on_entity_settings_pasted(e)
+    local source = e.source
+    if not source.valid or not entity_names[source.name] then
+        return
+    end
+
+    local destination = e.destination
+    if not destination.valid or not entity_names[destination.name] then
+        return
+    end
+
+    --   local source_priority, source_mode = get_settings_from_name(source.name)
+    --   local destination_priority, destination_mode = get_settings_from_name(destination.name)
+    --   if source_priority == destination_priority and source_mode == destination_mode then
+    --     return
+    --   end
+    --   local new_entity = change_entity(destination, source_priority, source_mode)
+    --   if not new_entity then
+    --     return
+    --   end
+
+    -- update_all_guis(new_entity)
 end
 
 script.on_configuration_changed(function()
@@ -646,7 +618,7 @@ script.on_init(function()
     storage.SNTD_nixieSprites = {}
     storage.SNTD_nextNixieDigit = {}
 
-    --- @type table<uinteger, NixieTubeGui>
+    --- @type table<uint, NixieTubeGui>
     storage.nixie_tube_gui = {}
     regizmatize_nixies()
 end)
@@ -657,16 +629,17 @@ local nixie_tube = {}
 
 nixie_tube.events = {
     [defines.events.on_gui_opened] = on_gui_opened,
+    [defines.events.on_entity_settings_pasted] = on_entity_settings_pasted,
 
-    [defines.events.on_entity_died] = on_remove_entity,
-    [defines.events.on_pre_player_mined_item] = on_remove_entity,
-    [defines.events.on_robot_built_entity] = on_place_entity,
-    [defines.events.on_robot_pre_mined] = on_remove_entity,
+    [defines.events.on_entity_died] = on_entity_destroyed,
+    [defines.events.on_player_mined_entity] = on_entity_destroyed,
+    [defines.events.on_pre_player_mined_item] = on_entity_destroyed,
+    [defines.events.script_raised_destroy] = on_entity_destroyed,
 
     [defines.events.on_built_entity] = on_place_entity,
-    [defines.events.script_raised_revive] = on_place_entity,
+    [defines.events.on_robot_built_entity] = on_place_entity,
     [defines.events.script_raised_built] = on_place_entity,
-    [defines.events.script_raised_destroy] = on_remove_entity,
+    [defines.events.script_raised_revive] = on_place_entity,
 }
 
 return nixie_tube

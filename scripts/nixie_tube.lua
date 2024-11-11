@@ -377,24 +377,18 @@ local handlers = {
     end,
 
     --- @param e EventData.on_gui_selection_state_changed
-    on_nt_gui_choose_elem_changed = function(self, e)
-        log("Changing signal with event " .. (serpent.block(e.name)))
-
+    on_nt_gui_elem_changed = function(self, e)
         local entity = self.entity
-
         local signal = e.element.elem_value
-        if not signal then
-            return
-        end
+        local behavior = entity.get_or_create_control_behavior()
 
-        log("Signal: " .. signal.name)
+        behavior.circuit_condition = {
+            comparator = "=",
+            first_signal = signal,
+            second_signal = signal,
+        }
 
-        -- local behavior = entity.get_or_create_control_behavior()
-        -- local conditin = behavior.circuit_condition
-        -- condition.first_signal = signal
-        -- behavior.circuit_condition = condition
-
-        -- displayValueString(entity)
+        displayValueString(entity)
         update_all_guis(entity)
     end,
 }
@@ -411,7 +405,13 @@ end)
 --- @param player LuaPlayer
 --- @param entity LuaEntity
 local function create_gui(player, entity)
+    -- TODO: Return if player already has this gui open
+
     destroy_gui(player.index)
+
+    local behavior = entity.get_or_create_control_behavior()
+    local condition = behavior.circuit_condition
+    local signal = condition and condition.first_signal
 
     local elems = gui.add(player.gui.screen, {
         type = "frame",
@@ -442,6 +442,7 @@ local function create_gui(player, entity)
         {
             type = "frame",
             style = "entity_frame",
+            style_mods = { padding = 12 },
             direction = "vertical",
             {
                 type = "frame",
@@ -455,16 +456,20 @@ local function create_gui(player, entity)
             },
             {
                 type = "flow",
+                style = "player_input_horizontal_flow",
                 style_mods = { top_margin = 4, vertical_align = "center" },
                 {
                     type = "label",
-                    caption = "Signal"
+                    caption = "Signal",
+                    style_mods = { width = 77 }
                 },
                 {
                     type = "choose-elem-button",
                     elem_type = "signal",
+                    signal = signal,
+                    -- locked = true, -- TODO: Figure out why this isn't respected
                     handler = {
-                        [defines.events.on_gui_elem_changed] = handlers.on_nt_gui_choose_elem_changed,
+                        [defines.events.on_gui_elem_changed] = handlers.on_nt_gui_elem_changed,
                     },
                 },
             },

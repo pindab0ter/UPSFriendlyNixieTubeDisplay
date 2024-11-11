@@ -1,6 +1,9 @@
 - [ ] Improve sprite resolution
 - [ ] Create custom GUI
   - [x] Get proof of concept working
-  - [ ] Create front end
-  - [ ] Handle GUI interactions
-- [ ] Fix circuit connections
+  - [x] Create front end
+  - [x] Handle GUI interactions
+  - [ ] Prevent changing settings for non-rightmost signals to prevent confusion
+    - [ ] Clear settings for nixie whenever they have a right neighbour
+- [ ] Fix circuit connection visuals
+- [ ] Fix "Turned off during daytime" in popup on hover

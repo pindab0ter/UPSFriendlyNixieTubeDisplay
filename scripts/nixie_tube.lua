@@ -154,7 +154,10 @@ local function on_place_entity(event)
     gizmatize_nixie(entity)
 end
 
+--- @param entity LuaEntity
 function gizmatize_nixie(entity)
+    entity.always_on = true
+
     local num = valid_nixie_number[entity.name]
 
     if num then
@@ -191,11 +194,12 @@ function gizmatize_nixie(entity)
         storage.SNTD_nixieSprites[entity.unit_number] = sprites
 
         -- properly reset nixies when (re)added
+        --- @type LuaLampControlBehavior?
         local behavior = entity.get_or_create_control_behavior()
+        --- @type CircuitConditionDefinition?
         local condition = behavior.circuit_condition
         condition.comparator = "="
-        condition.constant = 0
-        condition.second_signal = nil
+        condition.second_signal = condition.first_signal
         behavior.circuit_condition = condition
 
         --enslave guy to left, if there is one
@@ -266,7 +270,6 @@ local function on_tick(event)
                 if nixie.valid then
                     on_tick_controller(nixie)
                 else
-                    log("Removing invalid nixie: " .. nixie.unit_number)
                     nixie = nil
                 end
             else

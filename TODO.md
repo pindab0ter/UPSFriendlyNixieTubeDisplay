@@ -7,7 +7,9 @@
   - [ ] Prevent changing settings for non-rightmost signals to prevent confusion
     - [ ] Clear settings for nixie whenever they have a right neighbour
 - [x] Rewrite rendering code
-  - [ ] Add sprite caching back in
+  - [x] Add sprite caching back in
+  - [ ] Futher improve performance
+  - [ ] Fix z-fighting
 - [ ] Fix circuit connection visuals
 - [x] Fix "Turned off during daytime" in popup on hover
 

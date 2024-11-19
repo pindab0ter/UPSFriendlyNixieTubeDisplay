@@ -3,12 +3,14 @@ local util = require("scripts.util")
 
 --- @class NixieTubeController
 --- @field entity LuaEntity
+--- @field signal SignalID?
 --- @field last_value int?
 
 --- @class NixieTubeDisplay
 --- @field entity LuaEntity
 --- @field sprites table<uint, LuaRenderObject>
 --- @field next_display LuaEntity
+--- @field remaining_value string?
 
 storage = {
     --- @type table<uint, NixieTubeController> The 'controllers' are the rightmost Nixie tubes in a series of Nixie
@@ -24,19 +26,27 @@ storage = {
 
     --- @type table<uint, NixieTubeGui>
     gui = {},
+
+    --- @type number
+    update_delay = tonumber(settings.global["nixie-update-delay"].value) or error("nixie-update-delay not set"),
+
+    --- @type number
+    update_speed = tonumber(settings.global["nixie-tube-update-speed"].value) or error("nixie-tube-update-speed not set"),
 }
 
 --- @param nixie_tube LuaEntity
 --- @param data table?
+--- @return NixieTubeDisplay?
 local function storage_set_display(nixie_tube, data)
-    local digit = storage.displays[nixie_tube.unit_number]
-    if not digit then
-        digit = {
+    local display = storage.displays[nixie_tube.unit_number]
+    if not display then
+        display = {
             entity = nixie_tube,
             sprites = {},
-            next_display = nil
+            next_display = nil,
+            remaining_value = nil,
         }
-        storage.displays[nixie_tube.unit_number] = digit
+        storage.displays[nixie_tube.unit_number] = display
     end
 
     if not data then
@@ -44,8 +54,10 @@ local function storage_set_display(nixie_tube, data)
     end
 
     for k, v in pairs(data) do
-        digit[k] = v
+        display[k] = v
     end
+
+    return display
 end
 
 --- @param nixie_tube LuaEntity
@@ -55,6 +67,7 @@ local function storage_set_controller(nixie_tube, data)
     if not controller then
         controller = {
             entity = nixie_tube,
+            signal = nil,
             last_value = nil
         }
         storage.controllers[nixie_tube.unit_number] = controller
@@ -123,13 +136,13 @@ local function draw_value(display, value)
     local sprite_count = digit_counts[display.entity.name]
 
     if (not value) then
-        -- Set both this digit and the next digit to 'off'
+        -- Set this display to 'off'
         draw_sprites(display, (sprite_count == 1) and { "off" } or { "off", "off" })
     elseif #value < sprite_count then
-        -- Set this digit to the value, and the next digit to 'off'
+        -- Display the last digit
         draw_sprites(display, { "off", value })
     elseif #value >= sprite_count then
-        -- Set this digit and pass the rest to the next digit
+        -- Display the rightmost `sprite_count` digits
         draw_sprites(
             display,
             (sprite_count == 1) and { value:sub(-1) } or { value:sub(-2, -2), value:sub(-1) }
@@ -138,12 +151,39 @@ local function draw_value(display, value)
 
     if display.next_display then
         local next_display = storage.displays[display.next_display]
+
+        if not (next_display and next_display.entity and next_display.entity.valid) then
+            return
+        end
+
+        -- Cache the remaining value
+        local remaining_value = value and value:sub(1, -(sprite_count + 1)) or nil
+        if next_display.remaining_value == remaining_value then
+            return
+        end
+        next_display.remaining_value = remaining_value
+
         if value and (#value > sprite_count) then
-            local remaining_value = value:sub(1, -(sprite_count + 1))
             draw_value(next_display, remaining_value)
         else
-            -- Sett display to 'off'
+            -- Set display to 'off'
             draw_value(next_display, nil)
+        end
+    end
+end
+
+--- Invalidate the remaining value cache for this and all adjacent Nixie tubes to the east
+--- @param display NixieTubeDisplay
+function invalidate_remaining_value_cache(display)
+    if not display then
+        return
+    end
+
+    display.remaining_value = nil
+
+    for _, other_display in pairs(storage.displays) do
+        if other_display.next_display == display.entity.unit_number then
+            invalidate_remaining_value_cache(other_display)
         end
     end
 end
@@ -157,6 +197,8 @@ function configure_nixie_tube(nixie_tube)
     if not digit_count then
         return
     end
+
+    storage_set_display(nixie_tube)
 
     -- Process the Nixie Tube to the west, if there is one
     local western_neighbors = nixie_tube.surface.find_entities_filtered {
@@ -178,7 +220,7 @@ function configure_nixie_tube(nixie_tube)
         end
     end
 
-    -- Process the Nixie Tube to the east. If there is none, set this as a controller
+    -- Process the Nixie Tube to the east.
     eastern_neighbors = nixie_tube.surface.find_entities_filtered {
         position = { x = nixie_tube.position.x + 1, y = nixie_tube.position.y },
         name = nixie_tube.name,
@@ -188,18 +230,26 @@ function configure_nixie_tube(nixie_tube)
     for _, neighbor in pairs(eastern_neighbors) do
         if neighbor.valid then
             has_eastern_neighbor = true
-            storage_set_display(neighbor, {
-                next_display = nixie_tube.unit_number
+            local display = storage_set_display(neighbor, {
+                next_display = nixie_tube.unit_number,
             })
+
+            -- Otherwise the display will not render until the value of the display to the east changes
+            invalidate_remaining_value_cache(display)
         end
     end
 
+    -- If there is no eastern neighbor, set this as a controller
     if not has_eastern_neighbor then
-        storage_set_controller(nixie_tube, {})
-        storage.controllers[nixie_tube.unit_number] = {
-            entity = nixie_tube,
-            last_value = nil,
-        }
+        local control_behavior = nixie_tube.get_or_create_control_behavior()
+        local signal = control_behavior
+            and control_behavior.circuit_condition
+            and control_behavior.circuit_condition.first_signal
+            or nil
+
+        storage_set_controller(nixie_tube, {
+            signal = signal,
+        })
     end
 end
 
@@ -210,26 +260,32 @@ local function update_controller(controller)
     end
 
     local display = storage.displays[controller.entity.unit_number]
-    local control_behavior = controller.entity.get_or_create_control_behavior()
-    local signal = control_behavior.circuit_condition and control_behavior.circuit_condition.first_signal
-
-    -- TODO: Do not redraw when the signal hasn't changed
-    if not signal and controller.last_value ~= nil then
-        draw_value(display, nil)
-        controller.last_value = nil
+    if not (display and display.entity.valid) then
         return
     end
 
+    local signal = controller.signal
+
+    -- Set the displays to 'off' if there is no signal
+    if not signal then
+        if controller.last_value == nil then
+            return
+        end
+        draw_value(display, nil)
+        return
+    end
+
+    -- Get the signal value
     local value = controller.entity.get_signal(
         signal,
         defines.wire_connector_id.circuit_red,
         defines.wire_connector_id.circuit_green
     )
 
+    -- Do not update the displays if the value hasn't changed
     if value == controller.last_value then
         return
     end
-
     controller.last_value = value
 
     draw_value(display, ("%i"):format(value))
@@ -237,15 +293,12 @@ end
 
 --- @param event EventData.on_tick
 local function on_tick(event)
-    local update_delay = settings.global["nixie-update-delay"].value
-
-    if update_delay ~= 0 and event.tick % update_delay ~= 0 then
+    if storage.update_delay ~= 0 and event.tick % storage.update_delay ~= 0 then
         -- Only update every `update_delay` ticks
         return
     end
 
-    local update_speed = settings.global["nixie-tube-update-speed"].value
-    for _ = 1, update_speed do
+    for _ = 1, storage.update_speed do
         local controller
 
         if storage.next_controller and not storage.controllers[storage.next_controller] then
@@ -255,9 +308,11 @@ local function on_tick(event)
 
         storage.next_controller, controller = next(storage.controllers, storage.next_controller)
 
-        if controller and controller.entity and controller.entity.valid then
-            update_controller(controller)
+        if not (controller and controller.entity and controller.entity.valid) then
+            return
         end
+
+        update_controller(controller)
     end
 end
 
@@ -332,11 +387,11 @@ local handlers = {
         end
     end,
 
-    --- @param e EventData.on_gui_selection_state_changed
-    on_nt_gui_elem_changed = function(self, e)
-        local entity = self.entity
-        local signal = e.element.elem_value
-        local behavior = entity.get_or_create_control_behavior()
+    --- @param event EventData.on_gui_selection_state_changed
+    on_nt_gui_elem_changed = function(self, event)
+        local nixie_tube = self.entity
+        local signal = event.element.elem_value
+        local behavior = nixie_tube.get_or_create_control_behavior()
 
         behavior.circuit_condition = {
             comparator = "=",
@@ -344,8 +399,9 @@ local handlers = {
             second_signal = signal,
         }
 
-        draw_value(storage.displays[entity.unit_number])
-        update_all_guis(entity)
+        storage_set_controller(nixie_tube, { signal = signal })
+        draw_value(storage.displays[nixie_tube.unit_number])
+        update_all_guis(nixie_tube)
     end,
 }
 
@@ -468,7 +524,7 @@ end
 --- @param event EventData.on_object_destroyed
 local function on_object_destroyed(event)
     local entity = event.entity
-    if not entity.valid or not util.table_contains(entity_names, entity.name) then
+    if not entity or not entity.valid or not util.table_contains(entity_names, entity.name) then
         return
     end
 
@@ -480,9 +536,7 @@ local function on_object_destroyed(event)
 
     storage.displays[entity.unit_number] = nil
     storage.controllers[entity.unit_number] = nil
-    if storage.next_controller == entity.unit_number then
-        storage.next_controller, _ = next(storage.controllers, storage.next_controller)
-    end
+    storage.next_controller = nil
 end
 
 script.on_configuration_changed(function()
@@ -519,6 +573,7 @@ local nixie_tube = {
         [defines.events.on_entity_died] = on_object_destroyed,
         [defines.events.on_player_mined_entity] = on_object_destroyed,
         [defines.events.on_pre_player_mined_item] = on_object_destroyed,
+        [defines.events.on_robot_mined_entity] = on_object_destroyed,
         [defines.events.script_raised_destroy] = on_object_destroyed,
     }
 }
@@ -532,5 +587,14 @@ script.on_event(defines.events.on_script_trigger_effect, function(event)
     end
 end)
 
+script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
+    if event.mod_name == "UPSFriendlyNixieTubeDisplay" then
+        if event.setting == "nixie-update-delay" then
+            storage.update_delay = tonumber(settings.global["nixie-update-delay"].value)
+        elseif event.setting == "nixie-tube-update-speed" then
+            storage.update_speed = tonumber(settings.global["nixie-tube-update-speed"].value)
+        end
+    end
+end)
 
 return nixie_tube

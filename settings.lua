@@ -8,6 +8,7 @@ data:extend{
 		order = "nixie-speed-numeric",
 	},
   {
+    -- TODO: Rename to "nixie-tube-update-frequency"
     -- Update frequency
     setting_type = "runtime-global",
     name =  "nixie-update-delay",

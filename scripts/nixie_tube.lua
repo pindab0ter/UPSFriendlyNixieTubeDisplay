@@ -36,7 +36,7 @@ storage = {
 
 --- @param nixie_tube LuaEntity
 --- @param data table?
---- @return NixieTubeDisplay?
+--- @return NixieTubeDisplay
 local function storage_set_display(nixie_tube, data)
     local display = storage.displays[nixie_tube.unit_number]
     if not display then
@@ -49,11 +49,7 @@ local function storage_set_display(nixie_tube, data)
         storage.displays[nixie_tube.unit_number] = display
     end
 
-    if not data then
-        return
-    end
-
-    for k, v in pairs(data) do
+    for k, v in pairs(data or {}) do
         display[k] = v
     end
 

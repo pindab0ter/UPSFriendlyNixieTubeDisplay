@@ -119,14 +119,6 @@ data:extend {
   }
 }
 
-local emptySprite = {
-  filename = "__UPSFriendlyNixieTubeDisplay__/graphics/empty.png",
-  width = 1,
-  height = 1,
-  frame_count = 1,
-  shift = { 0, 0 }
-}
-
 local spriteList = {
   ["0"] = "0.png",
   ["1"] = "1.png",
@@ -148,10 +140,8 @@ for key, value in pairs(spriteList) do
       type = "sprite",
       name = "SNTD-old-nixie-tube-" .. key,
       filename = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube/" .. value,
-      priority = "high",
       width = 27,
       height = 45,
-      draw_as_glow = false,
     } --- @as data.Sprite
   }
 end

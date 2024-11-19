@@ -588,12 +588,10 @@ script.on_event(defines.events.on_script_trigger_effect, function(event)
 end)
 
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
-    if event.mod_name == "UPSFriendlyNixieTubeDisplay" then
-        if event.setting == "nixie-update-delay" then
-            storage.update_delay = tonumber(settings.global["nixie-update-delay"].value)
-        elseif event.setting == "nixie-tube-update-speed" then
-            storage.update_speed = tonumber(settings.global["nixie-tube-update-speed"].value)
-        end
+    if event.setting == "nixie-update-delay" then
+        storage.update_delay = tonumber(settings.global["nixie-update-delay"].value)
+    elseif event.setting == "nixie-tube-update-speed" then
+        storage.update_speed = tonumber(settings.global["nixie-tube-update-speed"].value)
     end
 end)
 

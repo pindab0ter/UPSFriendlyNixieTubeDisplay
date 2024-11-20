@@ -1,27 +1,29 @@
 ## Must
 
-- [ ] Create custom GUI
+- [x] Create custom GUI
   - [x] Get proof of concept working
   - [x] Create front end
   - [x] Handle GUI interactions
-  - [ ] Prevent changing settings for non-rightmost signals to prevent confusion
-    - [ ] Clear settings for nixie whenever they have a right neighbour
+  - [x] Prevent changing settings for non-rightmost signals to prevent confusion
+    - [x] Clear settings for Nixie Tube whenever they have a western neighbor
+    - [x] Redraw Nixie Tube when adding a western neighbor
 - [x] Rewrite rendering code
   - [x] Add sprite caching back in
-  - [ ] Futher improve performance
-  - [ ] Fix z-fighting
+  - [ ] Further improve performance if possible
+  - [ ] ~~Fix z-fighting~~ cannot be done with current approach it seems
 - [ ] Fix circuit connection visuals
 - [x] Fix "Turned off during daytime" in popup on hover
+- [ ] Fix memory leak when removing Nixie Tubes
 
 ## Should
 
 - [ ] Improve sprite resolution
 - [ ] Rename entities both in code and localisation
-  - [ ] 'old nixie tube' to either 'nixie tube' or 'classic nixie tube'
-  - [ ] 'nixie tube' to 'reinforced nixie tube'
+  - [ ] 'Old Nixie Tube' to either 'Classic Nixie Tube'
+  - [ ] 'Nixie Tube' to 'Reinforced Nixie Tube'
   - [ ] Write migrations
 - [ ] Improve phrasing and naming for settings
-- [ ] Split up GUI and controller code
+- [x] Split up GUI and controller code
 
 ## Could
 

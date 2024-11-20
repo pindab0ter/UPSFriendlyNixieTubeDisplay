@@ -79,6 +79,8 @@ end
 function nixie_tube_gui.create_nixie_tube_gui(player, entity)
     nixie_tube_gui.destroy_gui(player.index)
 
+    local is_controller = storage.controllers[entity.unit_number] ~= nil
+
     local behavior = entity.get_or_create_control_behavior()
     if (not behavior or not behavior) then return end
     local condition = behavior.circuit_condition
@@ -139,7 +141,7 @@ function nixie_tube_gui.create_nixie_tube_gui(player, entity)
                     type = "choose-elem-button",
                     elem_type = "signal",
                     signal = signal,
-                    -- locked = true, -- TODO: Figure out why this isn't respected
+                    enabled = is_controller,
                     handler = {
                         [defines.events.on_gui_elem_changed] = nixie_tube_gui.on_nt_gui_elem_changed,
                     },

@@ -46,6 +46,10 @@ local entity_names = {
     'SNTD-nixie-tube-small'
 }
 
+----------------------
+-- Nixie Tube logic --
+----------------------
+
 --- Set the digit(s) and update the sprite for a nixie tube
 --- @param display NixieTubeDisplay
 --- @param values table<string, string>
@@ -243,6 +247,47 @@ local function update_controller(controller)
     draw_value(display, ("%i"):format(value))
 end
 
+local function reconfigure_nixie_tubes()
+    storage.controllers = {}
+    storage.next_controller = nil
+    storage.displays = {}
+    storage.gui = {}
+
+    rendering.clear("UPSFriendlyNixieTubeDisplay")
+
+    for _, surface in pairs(game.surfaces) do
+        local entities = surface.find_entities_filtered { name = entity_names }
+        for _, entity in pairs(entities) do
+            configure_nixie_tube(entity);
+        end
+    end
+end
+
+--------------
+-- Commands --
+--------------
+
+commands.add_command(
+    "reconfigure-nixie-tubes",
+    "Reconfigure all Nixie Tubes",
+    function()
+        game.player.opened = nil
+        reconfigure_nixie_tubes()
+    end
+)
+
+-------------
+-- Filters --
+-------------
+
+local filters = {}
+filters[#filters + 1] = { filter = "name", name = "nixie_tube" }
+filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
+
+--------------------
+-- Event handlers --
+--------------------
+
 --- @param event EventData.on_tick
 local function on_tick(event)
     if storage.update_delay ~= 0 and event.tick % storage.update_delay ~= 0 then
@@ -268,22 +313,6 @@ local function on_tick(event)
     end
 end
 
-local function reconfigure_nixie_tubes()
-    storage.controllers = {}
-    storage.next_controller = nil
-    storage.displays = {}
-    storage.gui = {}
-
-    rendering.clear("UPSFriendlyNixieTubeDisplay")
-
-    for _, surface in pairs(game.surfaces) do
-        local entities = surface.find_entities_filtered { name = entity_names }
-        for _, entity in pairs(entities) do
-            configure_nixie_tube(entity);
-        end
-    end
-end
-
 --- @param event EventData.on_object_destroyed
 local function on_object_destroyed(event)
     local entity = event.entity
@@ -302,6 +331,25 @@ local function on_object_destroyed(event)
     storage.next_controller = nil
 end
 
+--- @param event EventData.on_script_trigger_effect
+local function on_script_trigger_effect(event)
+    if event.effect_id == "nixie-tube-created" then
+        local entity = event.cause_entity
+        if entity then
+            configure_nixie_tube(entity)
+        end
+    end
+end
+
+--- @param event EventData.on_runtime_mod_setting_changed
+local function on_runtime_mod_setting_changed(event)
+    if event.setting == "nixie-update-delay" then
+        storage.update_delay = tonumber(settings.global["nixie-update-delay"].value)
+    elseif event.setting == "nixie-tube-update-speed" then
+        storage.update_speed = tonumber(settings.global["nixie-tube-update-speed"].value)
+    end
+end
+
 script.on_configuration_changed(function()
     reconfigure_nixie_tubes()
 end)
@@ -313,19 +361,6 @@ script.on_init(function()
 
     storage.gui = {}
 end)
-
-commands.add_command(
-    "reconfigure-nixie-tubes",
-    "Reconfigure all Nixie Tubes",
-    function()
-        game.player.opened = nil
-        reconfigure_nixie_tubes()
-    end
-)
-
-local filters = {}
-filters[#filters + 1] = { filter = "name", name = "nixie_tube" }
-filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 
 nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function(self, event)
     local nixie_tube = self.entity
@@ -351,6 +386,8 @@ end
 local nixie_tube = {
     events = {
         [defines.events.on_tick] = on_tick,
+        [defines.events.on_script_trigger_effect] = on_script_trigger_effect,
+        [defines.events.on_runtime_mod_setting_changed] = on_runtime_mod_setting_changed,
         [defines.events.on_gui_opened] = nixie_tube_gui.on_gui_opened,
 
         [defines.events.on_entity_died] = on_object_destroyed,
@@ -360,22 +397,5 @@ local nixie_tube = {
         [defines.events.script_raised_destroy] = on_object_destroyed,
     }
 }
-
-script.on_event(defines.events.on_script_trigger_effect, function(event)
-    if event.effect_id == "nixie-tube-created" then
-        local entity = event.cause_entity
-        if entity then
-            configure_nixie_tube(entity)
-        end
-    end
-end)
-
-script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
-    if event.setting == "nixie-update-delay" then
-        storage.update_delay = tonumber(settings.global["nixie-update-delay"].value)
-    elseif event.setting == "nixie-tube-update-speed" then
-        storage.update_speed = tonumber(settings.global["nixie-tube-update-speed"].value)
-    end
-end)
 
 return nixie_tube

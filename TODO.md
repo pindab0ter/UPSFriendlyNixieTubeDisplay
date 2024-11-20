@@ -14,6 +14,7 @@
 - [ ] Fix circuit connection visuals
 - [x] Fix "Turned off during daytime" in popup on hover
 - [ ] Fix memory leak when removing Nixie Tubes
+- [ ] Implement small and big reinforced Nixie Tubes
 
 ## Should
 

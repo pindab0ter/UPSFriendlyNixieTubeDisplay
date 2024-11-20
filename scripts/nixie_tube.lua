@@ -346,10 +346,14 @@ local function on_object_destroyed(event)
     if display and display.next_display then
         local next_display = storage.displays[display.next_display]
 
-        local controller = util.storage_set_controller(next_display.entity)
-        storage.next_controller = controller.entity.unit_number
+        if next_display then
+            local controller = util.storage_set_controller(next_display.entity)
+            storage.next_controller = controller.entity.unit_number
 
-        update_controller(controller)
+            update_controller(controller)
+        else
+            storage.next_controller = nil
+        end
     else
         storage.next_controller = nil
     end

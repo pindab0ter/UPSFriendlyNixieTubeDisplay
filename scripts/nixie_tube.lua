@@ -1,316 +1,350 @@
 local gui = require("__flib__.gui")
+local util = require("scripts.util")
 
-local state_display = {
-    ["off"] = "*", -- default
+--- @class NixieTubeController
+--- @field entity LuaEntity
+--- @field signal SignalID?
+--- @field last_value int?
 
-    ["0"] = "+",
-    ["1"] = "-",
-    ["2"] = "/",
-    ["3"] = "%",
-    ["4"] = "^",
-    ["5"] = "<<",
-    ["6"] = ">>",
-    ["7"] = "AND",
-    ["8"] = "OR",
-    ["9"] = "XOR"
+--- @class NixieTubeDisplay
+--- @field entity LuaEntity
+--- @field sprites table<uint, LuaRenderObject>
+--- @field next_display LuaEntity
+--- @field remaining_value string?
+
+storage = {
+    --- @type table<uint, NixieTubeController> The 'controllers' are the rightmost Nixie tubes in a series of Nixie
+    ---     tubes, which are responsible for updating the entire series
+    controllers = {},
+
+    --- @type uint? The unit number of the next controller, so we can continue iterating where we left off if the amount
+    ---     of controllers is larger than the update speed
+    next_controller = nil,
+
+    --- @type table<uint, NixieTubeDisplay> The displays are the individual Nixie tubes in a series of Nixie tubes. A Nixie Tube can be a display and a controller at the same time
+    displays = {},
+
+    --- @type table<uint, NixieTubeGui>
+    gui = {},
+
+    --- @type number
+    update_delay = tonumber(settings.global["nixie-update-delay"].value) or error("nixie-update-delay not set"),
+
+    --- @type number
+    update_speed = tonumber(settings.global["nixie-tube-update-speed"].value) or error("nixie-tube-update-speed not set"),
 }
 
-local valid_nixie_number = {
+--- @param nixie_tube LuaEntity
+--- @param data table?
+--- @return NixieTubeDisplay?
+local function storage_set_display(nixie_tube, data)
+    local display = storage.displays[nixie_tube.unit_number]
+    if not display then
+        display = {
+            entity = nixie_tube,
+            sprites = {},
+            next_display = nil,
+            remaining_value = nil,
+        }
+        storage.displays[nixie_tube.unit_number] = display
+    end
+
+    if not data then
+        return
+    end
+
+    for k, v in pairs(data) do
+        display[k] = v
+    end
+
+    return display
+end
+
+--- @param nixie_tube LuaEntity
+--- @param data table?
+local function storage_set_controller(nixie_tube, data)
+    local controller = storage.controllers[nixie_tube.unit_number]
+    if not controller then
+        controller = {
+            entity = nixie_tube,
+            signal = nil,
+            last_value = nil
+        }
+        storage.controllers[nixie_tube.unit_number] = controller
+    end
+
+    if not data then
+        return
+    end
+
+    for k, v in pairs(data) do
+        controller[k] = v
+    end
+end
+
+local digit_counts = {
     ['SNTD-old-nixie-tube'] = 1,
     ['SNTD-nixie-tube'] = 1,
     ['SNTD-nixie-tube-small'] = 2
 }
 
 local entity_names = {
-    ['SNTD-old-nixie-tube'] = true,
-    ['SNTD-nixie-tube'] = true,
-    ['SNTD-nixie-tube-small'] = true
+    'SNTD-old-nixie-tube',
+    'SNTD-nixie-tube',
+    'SNTD-nixie-tube-small'
 }
 
-local sprite_names = {
-    'SNTD-nixie-tube-sprite',
-    'SNTD-old-nixie-tube-sprite',
-    'SNTD-nixie-tube-small-sprite',
-}
-
-local function remove_nixie_sprites(nixie)
-    if storage.SNTD_nixieSprites[nixie.unit_number] ~= nil then
-        for _, sprite in pairs(storage.SNTD_nixieSprites[nixie.unit_number]) do
-            if sprite.valid then
-                sprite.destroy()
-            end
+--- Set the digit(s) and update the sprite for a nixie tube
+--- @param display NixieTubeDisplay
+--- @param values table<string, string>
+local function draw_sprites(display, values)
+    for key, value in pairs(values) do
+        local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
+        if not value or not has_enough_energy then
+            value = "off"
         end
+
+        local render_object = display.sprites[key]
+
+        if not (render_object and render_object.valid) then
+            render_object = rendering.draw_sprite {
+                sprite = "SNTD-old-nixie-tube-" .. value,
+                target = {
+                    entity = display.entity,
+                    offset = { 0, -0.5 }
+                },
+                surface = display.entity.surface,
+                render_layer = "object",
+            }
+
+            display.sprites[key] = render_object
+            return
+        end
+
+        render_object.sprite = "SNTD-old-nixie-tube-" .. value
     end
 end
 
--- Set the state(s) and update the sprite for a nixie
-local function setStates(nixie, newstates)
-    for key, new_state in pairs(newstates) do
-        if not new_state then new_state = "off" end
-
-        local sprite = storage.SNTD_nixieSprites[nixie.unit_number][key]
-        if sprite and sprite.valid then
-            local behavior = sprite.get_or_create_control_behavior()
-            local parameters = behavior.parameters
-            if nixie.energy >= 50 then
-                -- new_state is a string of the new state (see stateDisplay)
-                parameters.operation = state_display[new_state]
-            else
-                if parameters.operation ~= state_display["off"] then
-                    parameters.operation = state_display["off"]
-                end
-            end
-            behavior.parameters = parameters
-        else
-            log("Invalid nixie: " .. nixie.unit_number)
-        end
-    end
-end
-
-local function get_signal_value(entity)
-    local behavior = entity.get_control_behavior()
-    if behavior == nil then return nil end
-
-    if behavior.disabled then return nil end
-
-    local condition = behavior.circuit_condition
-    if condition == nil then return nil end
-
-    -- shortcut, return stored value if unchanged
-    -- TODO: Use storage instead of this entity's signal constant
-    -- if not sig and condition.fulfilled and condition.comparator == "=" then
-    --   return condition.constant, false
-    -- end
-    -- Get the variable to display; return if none selected
-    local signal
-    signal = condition.first_signal
-
-    if signal == nil or signal.name == nil then return (nil) end
-
-    -- check both wires of the variable
-    local redCircuitValue = 0
-    local redCircuitNetwork = entity.get_circuit_network(defines.wire_type.red)
-    if redCircuitNetwork then
-        redCircuitValue = redCircuitNetwork.get_signal(signal)
-    end
-
-    local greenCircuitvalue = 0
-    local greenCircuitNetwork = entity.get_circuit_network(defines.wire_type.green)
-    if greenCircuitNetwork then
-        greenCircuitvalue = greenCircuitNetwork.get_signal(signal)
-    end
-
-    local circuitTotal = redCircuitValue + greenCircuitvalue
-
-    return circuitTotal, true
-end
-
-
---- Display the value on the nixie tube
-local function displayValueString(entity, valueString, enabled)
-    if not (entity and entity.valid) then return end
-
-    -- Check if the nixie is enabled and pass it on to the next digit
-    if (enabled == nil) then
-        enabled = false
-        local behavior = entity.get_control_behavior()
-        if behavior and behavior.circuit_condition and behavior.circuit_condition.fulfilled then
-            enabled = true
-        end
-    end
-
-    local nextDigit = storage.SNTD_nextNixieDigit[entity.unit_number]
-    local spriteCount = #storage.SNTD_nixieSprites[entity.unit_number]
-
-    if (not valueString) or (not enabled) then
-        -- Set both this digit and the next digit to 'off'
-        setStates(entity, (spriteCount == 1) and { "off" } or { "off", "off" })
-    elseif #valueString < spriteCount then
-        -- Set this digit to the value, and the next digit to 'off'
-        setStates(entity, { "off", valueString })
-    elseif #valueString >= spriteCount then
-        -- Set this digit and pass the rest to the next digit
-        setStates(entity,
-            (spriteCount == 1) and { valueString:sub(-1) } or { valueString:sub(-2, -2), valueString:sub(-1) })
-    end
-
-    if nextDigit then
-        if valueString and (#valueString > spriteCount) and enabled then
-            displayValueString(nextDigit, valueString:sub(1, -(spriteCount + 1)), enabled)
-        else
-            -- Set next digit to 'off'
-            displayValueString(nextDigit, nil, enabled)
-        end
-    end
-end
-
-local function on_place_entity(event)
-    local entity = event.created_entity or event.entity
-
-    if not entity.valid then
+--- Display the value on this and adjacent Nixie tubes
+--- @param display NixieTubeDisplay
+--- @param value? string
+local function draw_value(display, value)
+    if not (display and display.entity and display.entity.valid) then
         return
     end
 
-    gizmatize_nixie(entity)
-end
+    local sprite_count = digit_counts[display.entity.name]
 
---- @param entity LuaEntity
-function gizmatize_nixie(entity)
-    entity.always_on = true
+    if (not value) then
+        -- Set this display to 'off'
+        draw_sprites(display, (sprite_count == 1) and { "off" } or { "off", "off" })
+    elseif #value < sprite_count then
+        -- Display the last digit
+        draw_sprites(display, { "off", value })
+    elseif #value >= sprite_count then
+        -- Display the rightmost `sprite_count` digits
+        draw_sprites(
+            display,
+            (sprite_count == 1) and { value:sub(-1) } or { value:sub(-2, -2), value:sub(-1) }
+        )
+    end
 
-    local num = valid_nixie_number[entity.name]
+    if display.next_display then
+        local next_display = storage.displays[display.next_display]
 
-    if num then
-        local pos = entity.position
-        local surf = entity.surface
-
-        local sprites = {}
-        -- placing the base of the nixie
-        for n = 1, num do
-            -- place nixie at same spot
-            local name, position
-            if num == 1 then -- large nixie, one sprites
-                if entity.name == "SNTD-nixie-tube" then
-                    name = "SNTD-nixie-tube-sprite"
-                    position = { x = pos.x + 1 / 32, y = pos.y + 1 / 32 }
-                else -- old nixie tube
-                    name = "SNTD-old-nixie-tube-sprite"
-                    position = { x = pos.x + 1 / 32, y = pos.y + 3.5 / 32 }
-                end
-            else -- small nixie, two sprites
-                name = "SNTD-nixie-tube-small-sprite"
-                position = { x = pos.x - 4 / 32 + ((n - 1) * 10 / 32), y = pos.y + 3 / 32 }
-            end
-
-            local sprite = surf.create_entity(
-                {
-                    name = name,
-                    position = position,
-                    force = entity.force
-                })
-            sprites[n] = sprite
+        if not (next_display and next_display.entity and next_display.entity.valid) then
+            return
         end
 
-        storage.SNTD_nixieSprites[entity.unit_number] = sprites
-
-        -- properly reset nixies when (re)added
-        --- @type LuaLampControlBehavior?
-        local behavior = entity.get_or_create_control_behavior()
-        --- @type CircuitConditionDefinition?
-        local condition = behavior.circuit_condition
-        condition.comparator = "="
-        condition.second_signal = condition.first_signal
-        behavior.circuit_condition = condition
-
-        --enslave guy to left, if there is one
-        local neighbors = surf.find_entities_filtered {
-            position = { x = entity.position.x - 1, y = entity.position.y },
-            name = entity.name }
-        for _, n in pairs(neighbors) do
-            if n.valid then
-                if storage.nextNixieController == n.unit_number then
-                    -- if it's currently the *next* controller, claim that too...
-                    storage.nextNixieController = entity.unit_number
-                end
-
-                storage.SNTD_nixieControllers[n.unit_number] = nil
-                storage.SNTD_nextNixieDigit[entity.unit_number] = n
-            end
+        -- Cache the remaining value
+        local remaining_value = value and value:sub(1, -(sprite_count + 1)) or nil
+        if next_display.remaining_value == remaining_value then
+            return
         end
+        next_display.remaining_value = remaining_value
 
-        --slave self to right, if any, otherwise this will be the controller
-        neighbors = surf.find_entities_filtered {
-            position = { x = entity.position.x + 1, y = entity.position.y },
-            name = entity.name }
-        local foundright = false
-        for _, n in pairs(neighbors) do
-            if n.valid then
-                foundright = true
-                storage.SNTD_nextNixieDigit[n.unit_number] = entity
-            end
-        end
-        if not foundright then
-            storage.SNTD_nixieControllers[entity.unit_number] = entity
+        if value and (#value > sprite_count) then
+            draw_value(next_display, remaining_value)
+        else
+            -- Set display to 'off'
+            draw_value(next_display, nil)
         end
     end
 end
 
-local function on_tick_controller(entity)
-    if not entity.valid then
-        log("Removed invalid nixie: " .. entity.unit_number)
+--- Invalidate the remaining value cache for this and all adjacent Nixie tubes to the east
+--- @param display NixieTubeDisplay
+function invalidate_remaining_value_cache(display)
+    if not display then
         return
     end
 
-    local value, value_changed = get_signal_value(entity)
+    display.remaining_value = nil
 
-    if value then
-        if value_changed then
-            local format = "%i"
-            local valueString = format:format(value)
-            displayValueString(entity, valueString)
+    for _, other_display in pairs(storage.displays) do
+        if other_display.next_display == display.entity.unit_number then
+            invalidate_remaining_value_cache(other_display)
         end
-    else
-        displayValueString(entity)
     end
+end
+
+--- @param nixie_tube LuaEntity
+function configure_nixie_tube(nixie_tube)
+    nixie_tube.always_on = true
+
+    local digit_count = digit_counts[nixie_tube.name]
+
+    if not digit_count then
+        return
+    end
+
+    storage_set_display(nixie_tube)
+
+    -- Process the Nixie Tube to the west, if there is one
+    local western_neighbors = nixie_tube.surface.find_entities_filtered {
+        position = { x = nixie_tube.position.x - 1, y = nixie_tube.position.y },
+        name = nixie_tube.name,
+    }
+
+    for _, neighbor in pairs(western_neighbors) do
+        if neighbor.valid then
+            if storage.next_controller == neighbor.unit_number then
+                -- If it's currently the next controller, claim that
+                storage.next_controller = nixie_tube.unit_number
+            end
+
+            storage.controllers[neighbor.unit_number] = nil
+            storage_set_display(nixie_tube, {
+                next_display = neighbor.unit_number
+            })
+        end
+    end
+
+    -- Process the Nixie Tube to the east.
+    eastern_neighbors = nixie_tube.surface.find_entities_filtered {
+        position = { x = nixie_tube.position.x + 1, y = nixie_tube.position.y },
+        name = nixie_tube.name,
+    }
+
+    local has_eastern_neighbor = false
+    for _, neighbor in pairs(eastern_neighbors) do
+        if neighbor.valid then
+            has_eastern_neighbor = true
+            local display = storage_set_display(neighbor, {
+                next_display = nixie_tube.unit_number,
+            })
+
+            -- Otherwise the display will not render until the value of the display to the east changes
+            invalidate_remaining_value_cache(display)
+        end
+    end
+
+    -- If there is no eastern neighbor, set this as a controller
+    if not has_eastern_neighbor then
+        local control_behavior = nixie_tube.get_or_create_control_behavior()
+        local signal = control_behavior
+            and control_behavior.circuit_condition
+            and control_behavior.circuit_condition.first_signal
+            or nil
+
+        storage_set_controller(nixie_tube, {
+            signal = signal,
+        })
+    end
+end
+
+--- @param controller NixieTubeController
+local function update_controller(controller)
+    if not controller.entity.valid then
+        return
+    end
+
+    local display = storage.displays[controller.entity.unit_number]
+    if not (display and display.entity.valid) then
+        return
+    end
+
+    local signal = controller.signal
+
+    -- Set the displays to 'off' if there is no signal
+    if not signal then
+        if controller.last_value == nil then
+            return
+        end
+        draw_value(display, nil)
+        return
+    end
+
+    -- Get the signal value
+    local value = controller.entity.get_signal(
+        signal,
+        defines.wire_connector_id.circuit_red,
+        defines.wire_connector_id.circuit_green
+    )
+
+    -- Do not update the displays if the value hasn't changed
+    if value == controller.last_value then
+        return
+    end
+    controller.last_value = value
+
+    draw_value(display, ("%i"):format(value))
 end
 
 --- @param event EventData.on_tick
 local function on_tick(event)
-    if (settings.global["nixie-update-delay"].value == 0 or event.tick % settings.global["nixie-update-delay"].value == 0) then
-        for _ = 1, settings.global["nixie-tube-update-speed"].value do
-            local nixie
+    if storage.update_delay ~= 0 and event.tick % storage.update_delay ~= 0 then
+        -- Only update every `update_delay` ticks
+        return
+    end
 
-            if storage.nextNixieController and not storage.SNTD_nixieControllers[storage.nextNixieController] then
-                error("Invalid next_controller")
-            end
+    for _ = 1, storage.update_speed do
+        local controller
 
-            storage.nextNixieController, nixie = next(storage.SNTD_nixieControllers, storage.nextNixieController)
-
-            if nixie then
-                if nixie.valid then
-                    on_tick_controller(nixie)
-                else
-                    nixie = nil
-                end
-            else
-                return
-            end
+        if storage.next_controller and not storage.controllers[storage.next_controller] then
+            -- Calling `next()` with `nil` as the second argument will return the first element of the table
+            storage.next_controller = nil
         end
+
+        storage.next_controller, controller = next(storage.controllers, storage.next_controller)
+
+        if not (controller and controller.entity and controller.entity.valid) then
+            return
+        end
+
+        update_controller(controller)
     end
 end
 
-local function regizmatize_nixies()
-    storage.SNTD_nixieControllers = {}
-    storage.SNTD_nixieSprites = {}
-    storage.SNTD_nextNixieDigit = {}
+local function reconfigure_nixie_tubes()
+    storage.controllers = {}
+    storage.next_controller = nil
+    storage.displays = {}
+    storage.gui = {}
+
+    rendering.clear("UPSFriendlyNixieTubeDisplay")
 
     for _, surface in pairs(game.surfaces) do
-        for _, sprite_name in pairs(sprite_names) do
-            local entities = surface.find_entities_filtered { name = sprite_name }
-            for _, entity in pairs(entities) do
-                entity.destroy();
-            end
-        end
-
-        for nixie_name, _ in pairs(valid_nixie_number) do
-            local entities = surface.find_entities_filtered { name = nixie_name }
-            for _, entity in pairs(entities) do
-                gizmatize_nixie(entity);
-            end
+        local entities = surface.find_entities_filtered { name = entity_names }
+        for _, entity in pairs(entities) do
+            configure_nixie_tube(entity);
         end
     end
 end
 
 --- @param player_index uint
 local function destroy_gui(player_index)
-    local self = storage.nixie_tube_gui[player_index]
+    local player = game.get_player(player_index)
+    player.opened = nil
+
+    local self = storage.gui[player_index]
     if not self then
         return
     end
 
-    storage.nixie_tube_gui[player_index] = nil
+    storage.gui[player_index] = nil
 
-    local window = self.elems.nt_nixie_tube_window
+    local window = self.elements.nt_nixie_tube_window
     if not window.valid then
         return
     end
@@ -327,39 +361,14 @@ local function update_gui(self, new_entity)
     end
 
     if new_entity then
-        self.elems.entity_preview.entity = new_entity
+        self.elements.entity_preview.entity = new_entity
         self.entity = new_entity
     end
-
-    -- local entity = self.entity
-    -- local priority = "primary"
-    -- local mode = "output"
-    --
-    -- local mode_dropdown = self.elems.mode_dropdown
-    -- mode_dropdown.selected_index = table.find(modes, mode) --[[@as uint]]
-
-    -- local priority_dropdown = self.elems.priority_dropdown
-    -- priority_dropdown.selected_index = table.find(priorities, priority) -]
-    -- priority_dropdown.enabled = mode ~= "buffer"
-
-    -- local slider_value, dropdown_index = get_slider_values(entity.electric_buffer_size, mode)
-
-    -- local power_slider = self.elems.power_slider
-    -- power_slider.slider_value = slider_value
-    -- local textfield = self.elems.power_textfield
-    -- textfield.text = tostring(slider_value)
-    -- local dropdown = self.elems.power_dropdown
-    -- if mode == "buffer" then
-    --     dropdown.items = si_suffixes_joule
-    -- else
-    --     dropdown.items = si_suffixes_watt
-    -- end
-    -- dropdown.selected_index = dropdown_index
 end
 
 --- @param entity LuaEntity
 local function update_all_guis(entity)
-    for _, gui in pairs(storage.nixie_tube_gui) do
+    for _, gui in pairs(storage.gui) do
         if not gui.entity.valid or gui.entity == entity then
             update_gui(gui, entity)
         end
@@ -376,14 +385,13 @@ local handlers = {
         if not player.valid then
             return
         end
-        -- player.play_sound({ path = "entity-close/ee-infinity-accumulator-tertiary-buffer" })
     end,
 
-    --- @param e EventData.on_gui_selection_state_changed
-    on_nt_gui_elem_changed = function(self, e)
-        local entity = self.entity
-        local signal = e.element.elem_value
-        local behavior = entity.get_or_create_control_behavior()
+    --- @param event EventData.on_gui_selection_state_changed
+    on_nt_gui_elem_changed = function(self, event)
+        local nixie_tube = self.entity
+        local signal = event.element.elem_value
+        local behavior = nixie_tube.get_or_create_control_behavior()
 
         behavior.circuit_condition = {
             comparator = "=",
@@ -391,13 +399,14 @@ local handlers = {
             second_signal = signal,
         }
 
-        displayValueString(entity)
-        update_all_guis(entity)
+        storage_set_controller(nixie_tube, { signal = signal })
+        draw_value(storage.displays[nixie_tube.unit_number])
+        update_all_guis(nixie_tube)
     end,
 }
 
 gui.add_handlers(handlers, function(e, handler)
-    local self = storage.nixie_tube_gui[e.player_index]
+    local self = storage.gui[e.player_index]
     if not self then return end
     if not self.entity.valid then return end
 
@@ -407,21 +416,21 @@ end)
 
 --- @param player LuaPlayer
 --- @param entity LuaEntity
-local function create_gui(player, entity)
-    -- TODO: Return if player already has this gui open
-
+local function create_nixie_tube_gui(player, entity)
     destroy_gui(player.index)
 
     local behavior = entity.get_or_create_control_behavior()
+    if (not behavior or not behavior) then return end
     local condition = behavior.circuit_condition
     local signal = condition and condition.first_signal
 
-    local elems = gui.add(player.gui.screen, {
+    local elements = gui.add(player.gui.screen, {
         type = "frame",
         name = "nt_nixie_tube_window",
         direction = "vertical",
         elem_mods = { auto_center = true },
         handler = { [defines.events.on_gui_closed] = handlers.on_nt_gui_closed },
+        tags = { nixie_tube_unit_number = entity.unit_number },
         {
             type = "flow",
             style = "flib_titlebar_flow",
@@ -476,178 +485,116 @@ local function create_gui(player, entity)
                     },
                 },
             },
-            --  {
-            --    { type = "empty-widget", style = "flib_horizontal_pusher", ignored_by_interaction = true },
-            --     {
-            --         type = "drop-down",
-            --         name = "mode_dropdown",
-            --         items = { { "gui.ee-output" }, { "gui.ee-input" }, { "gui.ee-buffer" } },
-            --         selected_index = 0,
-            --         handler = {
-            --             [defines.events.on_gui_selection_state_changed] = handlers.on_nt_gui_mode_dropdown_changed,
-            --         },
-            --     },
-            -- },
-            -- { type = "line", direction = "horizontal" },
-            -- {
-            --     type = "flow",
-            --     style_mods = { vertical_align = "center" },
-            --     {
-            --         type = "label",
-            --         caption = { "", { "gui.ee-priority" }, " [img=info]" },
-            --         tooltip = { "gui.ee-ia-priority-description" },
-            --     },
-            --     { type = "empty-widget", style = "flib_horizontal_pusher", ignored_by_interaction = true },
-            --     {
-            --         type = "drop-down",
-            --         name = "priority_dropdown",
-            --         items = { { "gui.ee-primary" }, { "gui.ee-secondary" }, { "gui.ee-tertiary" } },
-            --         selected_index = 0,
-            --         handler = {
-            --             [defines.events.on_gui_selection_state_changed] = handlers.on_nt_gui_priority_dropdown_changed,
-            --         },
-            --     },
-            -- },
-            -- { type = "line", direction = "horizontal" },
-            -- {
-            --     type = "flow",
-            --     style_mods = { vertical_align = "center" },
-            --     {
-            --         type = "label",
-            --         style_mods = { right_margin = 6 },
-            --         caption = { "gui.ee-power" },
-            --     },
-            --     {
-            --         type = "slider",
-            --         name = "power_slider",
-            --         style_mods = { horizontally_stretchable = true },
-            --         minimum_value = 0,
-            --         maximum_value = 999,
-            --         value = 0,
-            --         handler = { [defines.events.on_gui_value_changed] = handlers.on_nt_gui_power_slider_changed },
-            --     },
-            --     {
-            --         type = "textfield",
-            --         name = "power_textfield",
-            --         style = "nt_slider_textfield",
-            --         text = "",
-            --         numeric = true,
-            --         allow_decimal = true,
-            --         clear_and_focus_on_right_click = true,
-            --         handler = { [defines.events.on_gui_text_changed] = handlers.on_nt_gui_power_textfield_changed },
-            --     },
-            --     {
-            --         type = "drop-down",
-            --         name = "power_dropdown",
-            --         style_mods = { width = 69 },
-            --         selected_index = 0,
-            --         handler = {
-            --             [defines.events.on_gui_selection_state_changed] = handlers.on_nt_gui_power_dropdown_changed,
-            --         },
-            --     },
-            -- },
         },
     })
 
-    player.opened = elems.nt_nixie_tube_window
+    player.opened = elements.nt_nixie_tube_window
 
     --- @class NixieTubeGui
     local self = {
-        elems = elems,
+        elements = elements,
         entity = entity,
         player = player,
     }
 
-    storage.nixie_tube_gui[player.index] = self
+    storage.gui[player.index] = self
 
     update_gui(self)
 end
 
---- @param e EventData.on_gui_opened
-local function on_gui_opened(e)
-    if e.gui_type ~= defines.gui_type.entity then
+--- @param event EventData.on_gui_opened
+local function on_gui_opened(event)
+    if event.gui_type ~= defines.gui_type.entity then
         return
     end
 
-    local entity = e.entity
-    if not entity or not entity.valid or not entity_names[entity.name] then return end
+    local entity = event.entity
+    if not entity or not entity.valid or not util.table_contains(entity_names, entity.name) then
+        return
+    end
 
-    local player = game.get_player(e.player_index)
-    if not player then return end
+    local player = game.get_player(event.player_index)
+    if not player then
+        return
+    end
 
-    create_gui(player, entity)
+    create_nixie_tube_gui(player, entity)
 end
 
---- @param e DestroyedEvent
-local function on_entity_destroyed(e)
-    local entity = e.entity
-    if not entity.valid or not entity_names[entity.name] then
+--- @param event EventData.on_object_destroyed
+local function on_object_destroyed(event)
+    local entity = event.entity
+    if not entity or not entity.valid or not util.table_contains(entity_names, entity.name) then
         return
     end
 
-    for player_index, gui in pairs(storage.nixie_tube_gui) do
+    for player_index, gui in pairs(storage.gui) do
         if gui.entity == entity then
             destroy_gui(player_index)
         end
     end
-end
 
---- @param e EventData.on_entity_settings_pasted
-local function on_entity_settings_pasted(e)
-    local source = e.source
-    if not source.valid or not entity_names[source.name] then
-        return
-    end
-
-    local destination = e.destination
-    if not destination.valid or not entity_names[destination.name] then
-        return
-    end
-
-    --   local source_priority, source_mode = get_settings_from_name(source.name)
-    --   local destination_priority, destination_mode = get_settings_from_name(destination.name)
-    --   if source_priority == destination_priority and source_mode == destination_mode then
-    --     return
-    --   end
-    --   local new_entity = change_entity(destination, source_priority, source_mode)
-    --   if not new_entity then
-    --     return
-    --   end
-
-    -- update_all_guis(new_entity)
+    storage.displays[entity.unit_number] = nil
+    storage.controllers[entity.unit_number] = nil
+    storage.next_controller = nil
 end
 
 script.on_configuration_changed(function()
-    regizmatize_nixies()
+    reconfigure_nixie_tubes()
 end)
 
 script.on_init(function()
-    storage.SNTD_nixieControllers = {}
-    storage.SNTD_nixieSprites = {}
-    storage.SNTD_nextNixieDigit = {}
+    storage.controllers = {}
+    storage.next_controller = nil
+    storage.displays = {}
 
     --- @type table<uint, NixieTubeGui>
-    storage.nixie_tube_gui = {}
-    regizmatize_nixies()
+    storage.gui = {}
 end)
 
-script.on_event(defines.events.on_tick, on_tick)
+commands.add_command(
+    "reconfigure-nixie-tubes",
+    "Reconfigure all Nixie Tubes",
+    function()
+        game.player.opened = nil
+        reconfigure_nixie_tubes()
+    end
+)
 
-local nixie_tube = {}
+local filters = {}
+filters[#filters + 1] = { filter = "name", name = "nixie_tube" }
+filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 
-nixie_tube.events = {
-    [defines.events.on_gui_opened] = on_gui_opened,
-    [defines.events.on_entity_settings_pasted] = on_entity_settings_pasted,
+local nixie_tube = {
+    events = {
+        [defines.events.on_tick] = on_tick,
+        [defines.events.on_gui_opened] = on_gui_opened,
 
-    [defines.events.on_entity_died] = on_entity_destroyed,
-    [defines.events.on_player_mined_entity] = on_entity_destroyed,
-    [defines.events.on_pre_player_mined_item] = on_entity_destroyed,
-    [defines.events.script_raised_destroy] = on_entity_destroyed,
-
-    [defines.events.on_built_entity] = on_place_entity,
-    [defines.events.on_robot_built_entity] = on_place_entity,
-    [defines.events.script_raised_built] = on_place_entity,
-    [defines.events.script_raised_revive] = on_place_entity,
+        [defines.events.on_entity_died] = on_object_destroyed,
+        [defines.events.on_player_mined_entity] = on_object_destroyed,
+        [defines.events.on_pre_player_mined_item] = on_object_destroyed,
+        [defines.events.on_robot_mined_entity] = on_object_destroyed,
+        [defines.events.script_raised_destroy] = on_object_destroyed,
+    }
 }
+
+script.on_event(defines.events.on_script_trigger_effect, function(event)
+    if event.effect_id == "nixie-tube-created" then
+        local entity = event.cause_entity
+        if entity then
+            configure_nixie_tube(entity)
+        end
+    end
+end)
+
+script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
+    if event.mod_name == "UPSFriendlyNixieTubeDisplay" then
+        if event.setting == "nixie-update-delay" then
+            storage.update_delay = tonumber(settings.global["nixie-update-delay"].value)
+        elseif event.setting == "nixie-tube-update-speed" then
+            storage.update_speed = tonumber(settings.global["nixie-tube-update-speed"].value)
+        end
+    end
+end)
 
 return nixie_tube

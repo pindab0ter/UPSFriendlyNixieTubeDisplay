@@ -39,12 +39,6 @@ local digit_counts = {
     ['SNTD-nixie-tube-small'] = 2
 }
 
-local entity_names = {
-    'SNTD-old-nixie-tube',
-    'SNTD-nixie-tube',
-    'SNTD-nixie-tube-small'
-}
-
 local state_display = {
     ["-"] = "-",
     ["0"] = "*",
@@ -173,21 +167,6 @@ function invalidate_remaining_value_cache(display)
     end
 end
 
---- @param nixie_tube LuaEntity
-local function destroy_arithmetic_combinators(nixie_tube)
-    local display = storage.displays[nixie_tube.unit_number]
-    if display == nil then
-        return
-    end
-
-    for key, arithmetic_combinator in pairs(display.arithmetic_combinators) do
-        if arithmetic_combinator.valid then
-            arithmetic_combinator.destroy()
-            display.arithmetic_combinators[key] = nil
-        end
-    end
-end
-
 --- @param controller NixieTubeController
 local function update_controller(controller)
     if not controller.entity.valid then
@@ -283,7 +262,7 @@ local function configure_nixie_tube(nixie_tube)
     end
 end
 
---- Clears the storage, removes all Nixie Tubes, and adds them back in
+--- Clears the storage, removes all Nixie Tubes and arithmetic combinators, and adds them back in
 local function reconfigure_nixie_tubes()
     storage.controllers = {}
     storage.next_controller = nil
@@ -291,9 +270,29 @@ local function reconfigure_nixie_tubes()
     storage.gui = {}
 
     for _, surface in pairs(game.surfaces) do
-        local entities = surface.find_entities_filtered { name = entity_names }
-        for _, entity in pairs(entities) do
-            destroy_arithmetic_combinators(entity)
+        local arithmetic_combinators = surface.find_entities_filtered {
+            name = {
+                "SNTD-old-nixie-tube-sprite",
+                "SNTD-nixie-tube-sprite",
+                "SNTD-nixie-tube-small-sprite"
+            },
+        }
+
+        for _, arithmetic_combinator in pairs(arithmetic_combinators) do
+            if arithmetic_combinator.valid then
+                arithmetic_combinator.destroy()
+            end
+        end
+
+        local nixie_tubes = surface.find_entities_filtered {
+            name = {
+                "SNTD-old-nixie-tube",
+                "SNTD-nixie-tube",
+                "SNTD-nixie-tube-small"
+            }
+        }
+
+        for _, entity in pairs(nixie_tubes) do
             configure_nixie_tube(entity);
         end
     end
@@ -346,6 +345,22 @@ local function on_tick(event)
         end
 
         update_controller(controller)
+    end
+end
+
+--- Destroy all arithmetic combinators associated with the Nixie Tube
+--- @param nixie_tube LuaEntity
+local function destroy_arithmetic_combinators(nixie_tube)
+    local display = storage.displays[nixie_tube.unit_number]
+    if display == nil then
+        return
+    end
+
+    for key, arithmetic_combinator in pairs(display.arithmetic_combinators) do
+        if arithmetic_combinator.valid then
+            arithmetic_combinator.destroy()
+        end
+        display.arithmetic_combinators[key] = nil
     end
 end
 

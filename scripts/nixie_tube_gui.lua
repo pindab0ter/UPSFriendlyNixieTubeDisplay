@@ -7,12 +7,6 @@ nixie_tube_gui.callbacks = {
     on_nt_gui_elem_changed = nil,
 }
 
-local entity_names = {
-    'SNTD-old-nixie-tube',
-    'SNTD-nixie-tube',
-    'SNTD-nixie-tube-small'
-}
-
 --- @param player_index uint
 function nixie_tube_gui.destroy_gui(player_index)
     local player = game.get_player(player_index)
@@ -60,24 +54,6 @@ function nixie_tube_gui.update_all_guis(entity)
             nixie_tube_gui.update_gui(gui, entity)
         end
     end
-end
-
---- @param self NixieTubeGui
---- @param event EventData.on_gui_closed|EventData.on_gui_click
-function nixie_tube_gui.on_nt_gui_closed(self, event)
-    nixie_tube_gui.destroy_gui(event.player_index)
-
-    local player = self.player
-    if not player.valid then
-        return
-    end
-end
-
---- @param self NixieTubeGui
---- @param event EventData.on_gui_selection_state_changed
-function nixie_tube_gui.on_nt_gui_elem_changed(self, event)
-    nixie_tube_gui.callbacks.on_nt_gui_elem_changed(self, event)
-    nixie_tube_gui.update_all_guis(self.entity)
 end
 
 --- @param player LuaPlayer
@@ -189,15 +165,27 @@ function nixie_tube_gui.on_gui_opened(event)
     nixie_tube_gui.create_nixie_tube_gui(player, entity)
 end
 
-gui.add_handlers({
-    on_nt_gui_closed = nixie_tube_gui.on_nt_gui_closed,
-    on_nt_gui_elem_changed = nixie_tube_gui.on_nt_gui_elem_changed,
-}, function (event, handler)
+--- @param self NixieTubeGui
+--- @param event EventData.on_gui_closed|EventData.on_gui_click
+function nixie_tube_gui.on_nt_gui_closed(self, event)
+    nixie_tube_gui.destroy_gui(event.player_index)
+end
+
+--- @param self NixieTubeGui
+--- @param event EventData.on_gui_selection_state_changed
+function nixie_tube_gui.on_nt_gui_elem_changed(self, event)
+    nixie_tube_gui.callbacks.on_nt_gui_elem_changed(self, event)
+    nixie_tube_gui.update_all_guis(self.entity)
+end
+
+gui.add_handlers(nixie_tube_gui, function (event, handler)
     local self = storage.gui[event.player_index]
     if not self then return end
     if not self.entity.valid then return end
 
     handler(self, event)
 end)
+
+gui.handle_events()
 
 return nixie_tube_gui

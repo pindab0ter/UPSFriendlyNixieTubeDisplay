@@ -423,6 +423,17 @@ script.on_init(function ()
     storage.displays = {}
 
     storage.gui = {}
+
+    script.on_event(defines.events.on_tick, on_tick)
+    script.on_event(defines.events.on_script_trigger_effect, on_script_trigger_effect)
+    script.on_event(defines.events.on_runtime_mod_setting_changed, on_runtime_mod_setting_changed)
+    script.on_event(defines.events.on_gui_opened, nixie_tube_gui.on_gui_opened)
+
+    script.on_event(defines.events.on_entity_died, on_object_destroyed)
+    script.on_event(defines.events.on_player_mined_entity, on_object_destroyed)
+    script.on_event(defines.events.on_pre_player_mined_item, on_object_destroyed)
+    script.on_event(defines.events.on_robot_mined_entity, on_object_destroyed)
+    script.on_event(defines.events.script_raised_destroy, on_object_destroyed)
 end)
 
 nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
@@ -436,7 +447,6 @@ nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
         second_signal = signal,
     }
 
-    local display = storage.displays[nixie_tube.unit_number]
     local controller = util.storage_set_controller(nixie_tube)
 
     update_controller(controller)

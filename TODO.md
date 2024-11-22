@@ -7,6 +7,7 @@
   - [x] Prevent changing settings for non-rightmost signals to prevent confusion
     - [x] Clear settings for Nixie Tube whenever they have a western neighbor
     - [x] Redraw Nixie Tube when adding a western neighbor
+    - [x] Fix UI not responding on fresh save
 - [x] Rewrite rendering code
   - [x] Add sprite caching back in
   - [ ] Further improve performance if possible

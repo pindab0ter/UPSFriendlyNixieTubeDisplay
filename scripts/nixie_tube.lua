@@ -1,14 +1,13 @@
 local nixie_tube_gui = require("scripts.nixie_tube_gui")
 local util = require("scripts.util")
 
---- @class NixieTubeController
+--- @class NixieTubeController The aspect of a Nixie Tube responsible for controlling a series of Nixie Tubes. Always
+---   the most eastern Nixie Tube (least significant digit) in a series of Nixie Tubes
 --- @field entity LuaEntity
---- @field signal SignalID?
---- @field last_value int?
 
---- @class NixieTubeDisplay
+--- @class NixieTubeDisplay The aspect of a Nixie Tube responsible for displaying one or two digits
 --- @field entity LuaEntity
---- @field sprites table<uint, LuaRenderObject>
+--- @field arithmetic_combinators table<uint, LuaEntity>
 --- @field next_display LuaEntity
 --- @field remaining_value string?
 
@@ -40,10 +39,18 @@ local digit_counts = {
     ['SNTD-nixie-tube-small'] = 2
 }
 
-local entity_names = {
-    'SNTD-old-nixie-tube',
-    'SNTD-nixie-tube',
-    'SNTD-nixie-tube-small'
+local state_display = {
+    ["-"] = "-",
+    ["0"] = "*",
+    ["1"] = "+",
+    ["2"] = "/",
+    ["3"] = "%",
+    ["4"] = "^",
+    ["5"] = "<<",
+    ["6"] = ">>",
+    ["7"] = "AND",
+    ["8"] = "OR",
+    ["9"] = "XOR",
 }
 
 ----------------------
@@ -53,34 +60,38 @@ local entity_names = {
 --- Set the digit(s) and update the sprite for a nixie tube
 --- @param display NixieTubeDisplay
 --- @param values table<string, string>
-local function draw_sprites(display, values)
+local function set_arithmetic_combinators(display, values)
     for key, value in pairs(values) do
+        --- @type LuaEntity?
+        local arithmetic_combinator = display.arithmetic_combinators[key]
+
         local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
-        if not value or not has_enough_energy then
-            value = "off"
-        end
-
-        local render_object = display.sprites[key]
-
-        if not (render_object and render_object.valid) then
-            render_object = rendering.draw_sprite {
-                sprite = "SNTD-old-nixie-tube-" .. value,
-                target = {
-                    entity = display.entity,
-                    offset = { 0, -0.5 }
-                },
-                surface = display.entity.surface,
-                render_layer = "object",
-            }
-
-            display.sprites[key] = render_object
+        if not value or value == "off" or not has_enough_energy then
+            if arithmetic_combinator and arithmetic_combinator.valid then
+                arithmetic_combinator.destroy()
+            end
+            display.arithmetic_combinators[key] = nil
             return
         end
 
-        render_object.sprite = "SNTD-old-nixie-tube-" .. value
+        if not (arithmetic_combinator and arithmetic_combinator.valid) then
+            arithmetic_combinator = display.entity.surface.create_entity {
+                name = display.entity.name .. "-sprite",
+                position = display.entity.position,
+                force = display.entity.force,
+            }
+            display.arithmetic_combinators[key] = arithmetic_combinator
+        end
+
+        local control_behavior = arithmetic_combinator.get_or_create_control_behavior()
+        local parameters = control_behavior.parameters
+        parameters.operation = state_display[value]
+        control_behavior.parameters = parameters
     end
 end
 
+--- TODO: Fix digits remaining when they should no longer be displayed (e.g. 123 -> 12 -> 1 -> off)
+---   Add 'force' parameter to this function?
 --- Display the value on this and adjacent Nixie tubes
 --- @param display NixieTubeDisplay
 --- @param value string
@@ -91,20 +102,23 @@ local function draw_value(display, value)
 
     local sprite_count = digit_counts[display.entity.name]
 
-    if value == nil or value == "off" then
+    if value == "off" then
         -- Set this display to 'off'
-        draw_sprites(display, (sprite_count == 1) and { "off" } or { "off", "off" })
+        set_arithmetic_combinators(display, (sprite_count == 1) and { "off" } or { "off", "off" })
     elseif #value < sprite_count then
         -- Display the last digit
-        draw_sprites(display, { "off", value })
+        set_arithmetic_combinators(display, { "off", value:sub(-1) })
     elseif #value >= sprite_count then
         -- Display the rightmost `sprite_count` digits
-        draw_sprites(
+        set_arithmetic_combinators(
             display,
             (sprite_count == 1) and { value:sub(-1) } or { value:sub(-2, -2), value:sub(-1) }
         )
     end
 
+    -- TODO: Minus remains when going from -10 to -9 (becomes --9)
+
+    -- Draw remainder on the next display
     if display.next_display then
         local next_display = storage.displays[display.next_display]
 
@@ -112,18 +126,27 @@ local function draw_value(display, value)
             return
         end
 
-        -- Cache the remaining value
-        local remaining_value = value and value:sub(1, -(sprite_count + 1)) or nil
+        local remaining_value
+        if value == "off" then
+            remaining_value = "off"
+        else
+            remaining_value = value:sub(1, -(sprite_count + 1))
+            if remaining_value == "" then
+                remaining_value = "off"
+            end
+        end
+
+
         if next_display.remaining_value == remaining_value then
             return
-        end
-        next_display.remaining_value = remaining_value
-
-        if value and value ~= "off" and (#value > sprite_count) then
-            draw_value(next_display, remaining_value)
         else
-            -- Set display to 'off'
+            next_display.remaining_value = remaining_value
+        end
+
+        if remaining_value == "off" then
             draw_value(next_display, "off")
+        else
+            draw_value(next_display, remaining_value)
         end
     end
 end
@@ -155,40 +178,26 @@ local function update_controller(controller)
         return
     end
 
-    local signal = controller.signal
+    local selected_signal = util.get_selected_signal(controller.entity)
+    local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
 
-    -- Set the displays to 'off' if there is no signal
-    if not signal then
-        if controller.last_value == "off" then
-            return
-        end
-        controller.last_value = "off"
+    if not selected_signal or not has_enough_energy then
         draw_value(display, "off")
         return
     end
 
-    -- Get the signal value
-    local value = controller.entity.get_signal(
-        signal,
+    local signal_value = controller.entity.get_signal(
+        selected_signal,
         defines.wire_connector_id.circuit_red,
         defines.wire_connector_id.circuit_green
     )
 
-    -- Do not update the displays if the value hasn't changed
-    if value == controller.last_value then
-        return
-    end
-    controller.last_value = value
-
-    if value == "off" then
-        draw_value(display, "off")
-    else
-        draw_value(display, ("%i"):format(value))
-    end
+    draw_value(display, ("%i"):format(signal_value))
 end
 
 --- @param nixie_tube LuaEntity
-function configure_nixie_tube(nixie_tube)
+local function configure_nixie_tube(nixie_tube)
+    -- Set up the Nixie Tube and its display
     nixie_tube.always_on = true
 
     local digit_count = digit_counts[nixie_tube.name]
@@ -247,31 +256,43 @@ function configure_nixie_tube(nixie_tube)
 
     -- If there is no eastern neighbor, set this as a controller
     if not has_eastern_neighbor then
-        local control_behavior = nixie_tube.get_or_create_control_behavior()
-        local signal = control_behavior
-            and control_behavior.circuit_condition
-            and control_behavior.circuit_condition.first_signal
-            or nil
-
-        local controller = util.storage_set_controller(nixie_tube, {
-            signal = signal,
-        })
+        local controller = util.storage_set_controller(nixie_tube)
 
         update_controller(controller)
     end
 end
 
+--- Clears the storage, removes all Nixie Tubes and arithmetic combinators, and adds them back in
 local function reconfigure_nixie_tubes()
     storage.controllers = {}
     storage.next_controller = nil
     storage.displays = {}
     storage.gui = {}
 
-    rendering.clear("UPSFriendlyNixieTubeDisplay")
-
     for _, surface in pairs(game.surfaces) do
-        local entities = surface.find_entities_filtered { name = entity_names }
-        for _, entity in pairs(entities) do
+        local arithmetic_combinators = surface.find_entities_filtered {
+            name = {
+                "SNTD-old-nixie-tube-sprite",
+                "SNTD-nixie-tube-sprite",
+                "SNTD-nixie-tube-small-sprite"
+            },
+        }
+
+        for _, arithmetic_combinator in pairs(arithmetic_combinators) do
+            if arithmetic_combinator.valid then
+                arithmetic_combinator.destroy()
+            end
+        end
+
+        local nixie_tubes = surface.find_entities_filtered {
+            name = {
+                "SNTD-old-nixie-tube",
+                "SNTD-nixie-tube",
+                "SNTD-nixie-tube-small"
+            }
+        }
+
+        for _, entity in pairs(nixie_tubes) do
             configure_nixie_tube(entity);
         end
     end
@@ -284,7 +305,7 @@ end
 commands.add_command(
     "reconfigure-nixie-tubes",
     "Reconfigure all Nixie Tubes",
-    function()
+    function ()
         game.player.opened = nil
         reconfigure_nixie_tubes()
     end
@@ -327,18 +348,32 @@ local function on_tick(event)
     end
 end
 
---- @param event EventData.on_object_destroyed
-local function on_object_destroyed(event)
-    local entity = event.entity
-    if not entity or not entity.valid or not util.table_contains(entity_names, entity.name) then
+--- Destroy all arithmetic combinators associated with the Nixie Tube
+--- @param nixie_tube LuaEntity
+local function destroy_arithmetic_combinators(nixie_tube)
+    local display = storage.displays[nixie_tube.unit_number]
+    if display == nil then
         return
     end
 
-    for player_index, gui in pairs(storage.gui) do
-        if gui.entity == entity then
-            nixie_tube_gui.destroy_gui(player_index)
+    for key, arithmetic_combinator in pairs(display.arithmetic_combinators) do
+        if arithmetic_combinator.valid then
+            arithmetic_combinator.destroy()
         end
+        display.arithmetic_combinators[key] = nil
     end
+end
+
+--- @param event EventData.on_object_destroyed
+local function on_object_destroyed(event)
+    local entity = event.entity
+    if not entity or not entity.valid or not util.is_nixie_tube(entity) then
+        return
+    end
+
+    nixie_tube_gui.destroy_all_guis()
+
+    destroy_arithmetic_combinators(entity)
 
     -- Promote the next display (to the west) to a controller if there is one
     display = storage.displays[entity.unit_number]
@@ -349,7 +384,6 @@ local function on_object_destroyed(event)
         if next_display then
             local controller = util.storage_set_controller(next_display.entity)
             storage.next_controller = controller.entity.unit_number
-
             update_controller(controller)
         else
             storage.next_controller = nil
@@ -364,11 +398,13 @@ end
 
 --- @param event EventData.on_script_trigger_effect
 local function on_script_trigger_effect(event)
-    if event.effect_id == "nixie-tube-created" then
-        local entity = event.cause_entity
-        if entity then
-            configure_nixie_tube(entity)
-        end
+    if event.effect_id ~= "nixie-tube-created" then
+        return
+    end
+
+    local entity = event.cause_entity
+    if entity then
+        configure_nixie_tube(entity)
     end
 end
 
@@ -381,11 +417,11 @@ local function on_runtime_mod_setting_changed(event)
     end
 end
 
-script.on_configuration_changed(function()
+script.on_configuration_changed(function ()
     reconfigure_nixie_tubes()
 end)
 
-script.on_init(function()
+script.on_init(function ()
     storage.controllers = {}
     storage.next_controller = nil
     storage.displays = {}
@@ -393,7 +429,7 @@ script.on_init(function()
     storage.gui = {}
 end)
 
-nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function(self, event)
+nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
     local nixie_tube = self.entity
     local signal = event.element.elem_value
     local behavior = nixie_tube.get_or_create_control_behavior()
@@ -405,13 +441,9 @@ nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function(self, event)
     }
 
     local display = storage.displays[nixie_tube.unit_number]
-    local controller = util.storage_set_controller(nixie_tube, { signal = signal })
-    local value = controller.entity.get_signal(
-        signal,
-        defines.wire_connector_id.circuit_red,
-        defines.wire_connector_id.circuit_green
-    )
-    draw_value(display, ("%i"):format(value))
+    local controller = util.storage_set_controller(nixie_tube)
+
+    update_controller(controller)
 end
 
 local nixie_tube = {

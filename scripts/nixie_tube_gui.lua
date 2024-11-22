@@ -33,6 +33,12 @@ function nixie_tube_gui.destroy_gui(player_index)
     window.destroy()
 end
 
+function nixie_tube_gui.destroy_all_guis()
+    for player_index, _ in pairs(storage.gui) do
+        nixie_tube_gui.destroy_gui(player_index)
+    end
+end
+
 --- @param self NixieTubeGui
 --- @param new_entity LuaEntity?
 function nixie_tube_gui.update_gui(self, new_entity)
@@ -171,7 +177,7 @@ function nixie_tube_gui.on_gui_opened(event)
     end
 
     local entity = event.entity
-    if not entity or not entity.valid or not util.table_contains(entity_names, entity.name) then
+    if not entity or not entity.valid or not util.is_nixie_tube(entity) then
         return
     end
 
@@ -186,7 +192,7 @@ end
 gui.add_handlers({
     on_nt_gui_closed = nixie_tube_gui.on_nt_gui_closed,
     on_nt_gui_elem_changed = nixie_tube_gui.on_nt_gui_elem_changed,
-}, function(event, handler)
+}, function (event, handler)
     local self = storage.gui[event.player_index]
     if not self then return end
     if not self.entity.valid then return end

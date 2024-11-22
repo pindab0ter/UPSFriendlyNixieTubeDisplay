@@ -90,8 +90,6 @@ local function set_arithmetic_combinators(display, values)
     end
 end
 
---- TODO: Fix digits remaining when they should no longer be displayed (e.g. 123 -> 12 -> 1 -> off)
----   Add 'force' parameter to this function?
 --- Display the value on this and adjacent Nixie tubes
 --- @param display NixieTubeDisplay
 --- @param value string
@@ -115,8 +113,6 @@ local function draw_value(display, value)
             (sprite_count == 1) and { value:sub(-1) } or { value:sub(-2, -2), value:sub(-1) }
         )
     end
-
-    -- TODO: Minus remains when going from -10 to -9 (becomes --9)
 
     -- Draw remainder on the next display
     if display.next_display then
@@ -151,22 +147,6 @@ local function draw_value(display, value)
     end
 end
 
---- Invalidate the remaining value cache for this and all adjacent Nixie tubes to the east
---- @param display NixieTubeDisplay
-function invalidate_remaining_value_cache(display)
-    if not display then
-        return
-    end
-
-    display.remaining_value = nil
-
-    for _, other_display in pairs(storage.displays) do
-        if other_display.next_display == display.entity.unit_number then
-            invalidate_remaining_value_cache(other_display)
-        end
-    end
-end
-
 --- @param controller NixieTubeController
 local function update_controller(controller)
     if not controller.entity.valid then
@@ -193,6 +173,22 @@ local function update_controller(controller)
     )
 
     draw_value(display, ("%i"):format(signal_value))
+end
+
+--- Invalidate the remaining value cache for this and all adjacent Nixie tubes to the east
+--- @param display NixieTubeDisplay
+function invalidate_remaining_value_cache(display)
+    if not display then
+        return
+    end
+
+    display.remaining_value = nil
+
+    for _, other_display in pairs(storage.displays) do
+        if other_display.next_display == display.entity.unit_number then
+            invalidate_remaining_value_cache(other_display)
+        end
+    end
 end
 
 --- @param nixie_tube LuaEntity

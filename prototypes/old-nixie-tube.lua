@@ -62,8 +62,12 @@ data:extend {
         order = "z[zebra]",
         icon = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube/icon.png",
         icon_size = 32,
+        collision_box = {
+            { x = -0.35, y = -0.35 },
+            { x = 0.35,  y = 0.35 }
+        },
         selection_box = {
-            { x = -0.5, y = -1.3 },
+            { x = -0.5, y = -0.5 },
             { x = 0.5,  y = 0.5 }
         },
         flags = { "placeable-neutral", "player-creation", "not-on-map" },

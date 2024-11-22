@@ -1,5 +1,11 @@
 local util = {}
 
+local entity_names = {
+    'SNTD-old-nixie-tube',
+    'SNTD-nixie-tube',
+    'SNTD-nixie-tube-small'
+}
+
 ---@param table table
 ---@return boolean
 function util.table_contains(table, value)
@@ -11,6 +17,23 @@ function util.table_contains(table, value)
     return false
 end
 
+--- @param entity LuaEntity
+--- @return boolean
+function util.is_nixie_tube(entity)
+    return util.table_contains(entity_names, entity.name)
+end
+
+--- @param entity LuaEntity
+--- @return SignalID?
+function util.get_selected_signal(entity)
+    local control_behavior = entity.get_control_behavior()
+
+    return control_behavior
+        and control_behavior.circuit_condition
+        and control_behavior.circuit_condition.first_signal
+        or nil
+end
+
 --- @param nixie_tube LuaEntity
 --- @param data table?
 --- @return NixieTubeDisplay
@@ -19,7 +42,7 @@ function util.storage_set_display(nixie_tube, data)
     if not display then
         display = {
             entity = nixie_tube,
-            sprites = {},
+            arithmetic_combinators = {},
             next_display = nil,
             remaining_value = nil,
         }

@@ -137,7 +137,7 @@ local function draw_value(display, value)
         end
 
 
-        if next_display.remaining_value == value then
+        if next_display.remaining_value == remaining_value then
             return
         else
             next_display.remaining_value = remaining_value

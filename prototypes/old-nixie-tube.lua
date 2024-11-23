@@ -1,5 +1,5 @@
 require "util"
-require "lib.prototyping.circuit-network"
+local common = require "common"
 
 local function build_sprite(value)
     local orientation = {
@@ -17,19 +17,6 @@ local function build_sprite(value)
         west  = orientation,
     })
 end
-
-local empty_sprite = {
-    filename = "__UPSFriendlyNixieTubeDisplay__/graphics/empty.png",
-    width = 1,
-    height = 1,
-    frame_count = 1,
-    shift = { 0, 0 }
-}
-
-local empty_light = {
-    intensity = 0,
-    size = 0,
-}
 
 data:extend {
     {
@@ -105,14 +92,9 @@ data:extend {
             type = "electric",
             usage_priority = "secondary-input",
         },
-        light = empty_light,
+        light = common.empty_light,
         circuit_connector = {
-            sprites = {
-                led_red = empty_sprite,
-                led_green = empty_sprite,
-                led_blue = empty_sprite,
-                led_light = empty_light,
-            },
+            sprites = common.empty_sprites,
             points = {
                 wire = {
                     green = util.by_pixel_hr(17, 13),
@@ -169,25 +151,12 @@ data:extend {
         },
         active_energy_usage            = "1W",
 
-        sprites                        = {
-            north = empty_sprite,
-            east  = empty_sprite,
-            south = empty_sprite,
-            west  = empty_sprite,
-        },
-
-        activity_led_sprites           = {
-            north = empty_sprite,
-            east  = empty_sprite,
-            south = empty_sprite,
-            west  = empty_sprite,
-        },
-
-        activity_led_light             = empty_light,
-        activity_led_light_offsets     = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
-
-        screen_light                   = empty_light,
-        screen_light_offsets           = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
+        sprites                        = common.empty_sprites,
+        activity_led_sprites           = common.empty_sprites,
+        activity_led_light             = common.empty_light,
+        activity_led_light_offsets     = common.empty_offsets,
+        screen_light                   = common.empty_light,
+        screen_light_offsets           = common.empty_offsets,
 
         minus_symbol_sprites           = build_sprite("-"),
         multiply_symbol_sprites        = build_sprite("0"),
@@ -201,21 +170,10 @@ data:extend {
         or_symbol_sprites              = build_sprite("8"),
         xor_symbol_sprites             = build_sprite("9"),
 
-        input_connection_bounding_box  = { { 0, 0 }, { 0, 0 } },
-        input_connection_points        = {
-            { shadow = { red = { 0, 0 }, green = { 0, 0 }, }, wire = { red = { 0, 0 }, green = { 0, 0 }, } },
-            { shadow = { red = { 0, 0 }, green = { 0, 0 }, }, wire = { red = { 0, 0 }, green = { 0, 0 }, } },
-            { shadow = { red = { 0, 0 }, green = { 0, 0 }, }, wire = { red = { 0, 0 }, green = { 0, 0 }, } },
-            { shadow = { red = { 0, 0 }, green = { 0, 0 }, }, wire = { red = { 0, 0 }, green = { 0, 0 }, } }
-        },
-
-        output_connection_bounding_box = { { 0, 0 }, { 0, 0 } },
-        output_connection_points       = {
-            { shadow = { red = { 0, 0 }, green = { 0, 0 }, }, wire = { red = { 0, 0 }, green = { 0, 0 }, } },
-            { shadow = { red = { 0, 0 }, green = { 0, 0 }, }, wire = { red = { 0, 0 }, green = { 0, 0 }, } },
-            { shadow = { red = { 0, 0 }, green = { 0, 0 }, }, wire = { red = { 0, 0 }, green = { 0, 0 }, } },
-            { shadow = { red = { 0, 0 }, green = { 0, 0 }, }, wire = { red = { 0, 0 }, green = { 0, 0 }, } }
-        },
+        input_connection_bounding_box  = common.empty_bounding_box,
+        input_connection_points        = common.empty_wire_connection_point,
+        output_connection_bounding_box = common.empty_bounding_box,
+        output_connection_points       = common.empty_wire_connection_point,
 
         circuit_wire_max_distance      = 0,
     }

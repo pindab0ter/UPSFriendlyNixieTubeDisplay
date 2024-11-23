@@ -412,6 +412,9 @@ local function on_runtime_mod_setting_changed(event)
 end
 
 script.on_configuration_changed(function ()
+    storage.update_delay = tonumber(settings.global["nixie-update-delay"].value)
+    storage.update_speed = tonumber(settings.global["nixie-tube-update-speed"].value)
+
     reconfigure_nixie_tubes()
 end)
 
@@ -419,7 +422,6 @@ script.on_init(function ()
     storage.controllers = {}
     storage.next_controller = nil
     storage.displays = {}
-
     storage.gui = {}
 
     script.on_event(defines.events.on_tick, on_tick)

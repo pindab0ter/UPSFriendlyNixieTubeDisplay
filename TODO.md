@@ -16,6 +16,7 @@
 - [x] Fix "Turned off during daytime" in popup on hover
 - [x] Fix memory leak when removing Nixie Tubes
 - [ ] Implement small and big reinforced Nixie Tubes
+- [ ] Test upgrade to 2.0 path
 
 ## Should
 

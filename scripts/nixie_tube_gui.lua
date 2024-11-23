@@ -1,5 +1,5 @@
 local gui = require("__flib__.gui")
-local util = require("scripts.util")
+local helpers = require("scripts.helpers")
 local nixie_tube_gui = {}
 
 nixie_tube_gui.callbacks = {
@@ -61,12 +61,15 @@ end
 function nixie_tube_gui.create_nixie_tube_gui(player, entity)
     nixie_tube_gui.destroy_gui(player.index)
 
-    local is_controller = storage.controllers[entity.unit_number] ~= nil
+    local behavior = entity.get_or_create_control_behavior() --[[@as LuaLampControlBehavior?]]
 
-    local behavior = entity.get_or_create_control_behavior()
-    if (not behavior or not behavior) then return end
-    local condition = behavior.circuit_condition
-    local signal = condition and condition.first_signal
+    if not behavior then
+        return
+    end
+
+    local is_controller = storage.controllers[entity.unit_number] ~= nil
+    local circuit_condition = behavior.circuit_condition --[[@as CircuitCondition?]]
+    local signal = circuit_condition and circuit_condition.first_signal
 
     local elements = gui.add(player.gui.screen, {
         type = "frame",
@@ -153,7 +156,7 @@ function nixie_tube_gui.on_gui_opened(event)
     end
 
     local entity = event.entity
-    if not entity or not entity.valid or not util.is_nixie_tube(entity) then
+    if not entity or not entity.valid or not helpers.is_nixie_tube(entity) then
         return
     end
 

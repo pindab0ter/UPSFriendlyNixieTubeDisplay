@@ -1,4 +1,4 @@
-local util = {}
+local helpers = {}
 
 local entity_names = {
     'SNTD-old-nixie-tube',
@@ -8,7 +8,7 @@ local entity_names = {
 
 ---@param table table
 ---@return boolean
-function util.table_contains(table, value)
+function helpers.table_contains(table, value)
     for _, v in pairs(table) do
         if v == value then
             return true
@@ -19,25 +19,28 @@ end
 
 --- @param entity LuaEntity
 --- @return boolean
-function util.is_nixie_tube(entity)
-    return util.table_contains(entity_names, entity.name)
+function helpers.is_nixie_tube(entity)
+    return helpers.table_contains(entity_names, entity.name)
 end
 
---- @param entity LuaEntity
+--- @param nixie_tube LuaEntity
 --- @return SignalID?
-function util.get_selected_signal(entity)
-    local control_behavior = entity.get_control_behavior()
+function helpers.get_selected_signal(nixie_tube)
+    local control_behavior = nixie_tube.get_control_behavior() --[[@as LuaLampControlBehavior?]]
+
+    if not control_behavior then
+        return nil
+    end
 
     return control_behavior
-        and control_behavior.circuit_condition
-        and control_behavior.circuit_condition.first_signal
-        or nil
+        .circuit_condition --[[@as CircuitCondition]]
+        .first_signal
 end
 
 --- @param nixie_tube LuaEntity
 --- @param data table?
 --- @return NixieTubeDisplay
-function util.storage_set_display(nixie_tube, data)
+function helpers.storage_set_display(nixie_tube, data)
     local display = storage.displays[nixie_tube.unit_number]
     if not display then
         display = {
@@ -59,7 +62,7 @@ end
 --- @param nixie_tube LuaEntity
 --- @param data table?
 --- @return NixieTubeController
-function util.storage_set_controller(nixie_tube, data)
+function helpers.storage_set_controller(nixie_tube, data)
     local controller = storage.controllers[nixie_tube.unit_number]
     if not controller then
         controller = {
@@ -77,4 +80,4 @@ function util.storage_set_controller(nixie_tube, data)
     return controller
 end
 
-return util
+return helpers

@@ -1,5 +1,5 @@
 local nixie_tube_gui = require("scripts.nixie_tube_gui")
-local util = require("scripts.util")
+local helpers = require("scripts.helpers")
 
 --- @class NixieTubeController The aspect of a Nixie Tube responsible for controlling a series of Nixie Tubes. Always
 ---   the most eastern Nixie Tube (least significant digit) in a series of Nixie Tubes
@@ -80,10 +80,15 @@ local function set_arithmetic_combinators(display, values)
                 position = display.entity.position,
                 force = display.entity.force,
             }
+
+            if not arithmetic_combinator then
+                error("Failed to create arithmetic combinator for Nixie Tube")
+            end
+
             display.arithmetic_combinators[key] = arithmetic_combinator
         end
 
-        local control_behavior = arithmetic_combinator.get_or_create_control_behavior()
+        local control_behavior = arithmetic_combinator.get_or_create_control_behavior() --[[@as LuaArithmeticCombinatorControlBehavior]]
         local parameters = control_behavior.parameters
         parameters.operation = state_display[value]
         control_behavior.parameters = parameters
@@ -158,7 +163,7 @@ local function update_controller(controller)
         return
     end
 
-    local selected_signal = util.get_selected_signal(controller.entity)
+    local selected_signal = helpers.get_selected_signal(controller.entity)
     local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
 
     if not selected_signal or not has_enough_energy then
@@ -175,7 +180,9 @@ local function update_controller(controller)
     draw_value(display, ("%i"):format(signal_value))
 end
 
---- Invalidate the remaining value cache for this and all adjacent Nixie tubes to the east
+--- Invalidate the remaining value cache for this and all adjacent Nixie tubes to the east,
+--- causing the value to be redrawn
+---
 --- @param display NixieTubeDisplay
 function invalidate_remaining_value_cache(display)
     if not display then
@@ -202,7 +209,7 @@ local function configure_nixie_tube(nixie_tube)
         return
     end
 
-    util.storage_set_display(nixie_tube)
+    helpers.storage_set_display(nixie_tube)
 
     -- Process the Nixie Tube to the west, if there is one
     local western_neighbors = nixie_tube.surface.find_entities_filtered {
@@ -217,13 +224,13 @@ local function configure_nixie_tube(nixie_tube)
                 storage.next_controller = nixie_tube.unit_number
             end
 
-            local neighbor_control_behavior = neighbor.get_control_behavior()
+            local neighbor_control_behavior = neighbor.get_control_behavior() --[[@as LuaLampControlBehavior?]]
             if neighbor_control_behavior then
                 neighbor_control_behavior.circuit_condition = nil
             end
 
             storage.controllers[neighbor.unit_number] = nil
-            local neighbor_display = util.storage_set_display(nixie_tube, {
+            local neighbor_display = helpers.storage_set_display(nixie_tube, {
                 next_display = neighbor.unit_number
             })
 
@@ -241,7 +248,7 @@ local function configure_nixie_tube(nixie_tube)
     for _, neighbor in pairs(eastern_neighbors) do
         if neighbor.valid then
             has_eastern_neighbor = true
-            local neighbor_display = util.storage_set_display(neighbor, {
+            local neighbor_display = helpers.storage_set_display(neighbor, {
                 next_display = nixie_tube.unit_number,
             })
 
@@ -252,7 +259,7 @@ local function configure_nixie_tube(nixie_tube)
 
     -- If there is no eastern neighbor, set this as a controller
     if not has_eastern_neighbor then
-        local controller = util.storage_set_controller(nixie_tube)
+        local controller = helpers.storage_set_controller(nixie_tube)
 
         update_controller(controller)
     end
@@ -336,7 +343,7 @@ local function on_tick(event)
 
         storage.next_controller, controller = next(storage.controllers, storage.next_controller)
 
-        if not (controller and controller.entity and controller.entity.valid) then
+        if not controller then
             return
         end
 
@@ -360,10 +367,10 @@ local function destroy_arithmetic_combinators(nixie_tube)
     end
 end
 
---- @param event EventData.on_object_destroyed
+--- @param event EventData.on_entity_died|EventData.on_player_mined_entity|EventData.on_robot_mined_entity|EventData.script_raised_destroy
 local function on_object_destroyed(event)
     local entity = event.entity
-    if not entity or not entity.valid or not util.is_nixie_tube(entity) then
+    if not entity or not entity.valid or not helpers.is_nixie_tube(entity) then
         return
     end
 
@@ -378,7 +385,7 @@ local function on_object_destroyed(event)
         local next_display = storage.displays[display.next_display]
 
         if next_display then
-            local controller = util.storage_set_controller(next_display.entity)
+            local controller = helpers.storage_set_controller(next_display.entity)
             storage.next_controller = controller.entity.unit_number
             update_controller(controller)
         else
@@ -431,7 +438,6 @@ script.on_init(function ()
 
     script.on_event(defines.events.on_entity_died, on_object_destroyed)
     script.on_event(defines.events.on_player_mined_entity, on_object_destroyed)
-    script.on_event(defines.events.on_pre_player_mined_item, on_object_destroyed)
     script.on_event(defines.events.on_robot_mined_entity, on_object_destroyed)
     script.on_event(defines.events.script_raised_destroy, on_object_destroyed)
 end)
@@ -447,7 +453,7 @@ nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
         second_signal = signal,
     }
 
-    local controller = util.storage_set_controller(nixie_tube)
+    local controller = helpers.storage_set_controller(nixie_tube)
 
     update_controller(controller)
 end
@@ -461,7 +467,6 @@ local nixie_tube = {
 
         [defines.events.on_entity_died] = on_object_destroyed,
         [defines.events.on_player_mined_entity] = on_object_destroyed,
-        [defines.events.on_pre_player_mined_item] = on_object_destroyed,
         [defines.events.on_robot_mined_entity] = on_object_destroyed,
         [defines.events.script_raised_destroy] = on_object_destroyed,
     }

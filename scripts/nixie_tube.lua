@@ -59,14 +59,14 @@ local state_display = {
 
 --- Set the digit(s) and update the sprite for a nixie tube
 --- @param display NixieTubeDisplay
---- @param values table<string, string>
+--- @param values table<uint, string?>
 local function set_arithmetic_combinators(display, values)
     for key, value in pairs(values) do
         --- @type LuaEntity?
         local arithmetic_combinator = display.arithmetic_combinators[key]
 
         local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
-        if not value or value == "off" or not has_enough_energy then
+        if not value or not has_enough_energy then
             if arithmetic_combinator and arithmetic_combinator.valid then
                 arithmetic_combinator.destroy()
             end
@@ -95,27 +95,29 @@ local function set_arithmetic_combinators(display, values)
     end
 end
 
---- Display the value on this and adjacent Nixie tubes
+--- Display the characters on this and adjacent Nixie tubes
 --- @param display NixieTubeDisplay
---- @param value string
-local function draw_value(display, value)
+--- @param characters table<uint, string>
+local function display_characters(display, characters)
     if not (display and display.entity and display.entity.valid) then
         return
     end
 
     local sprite_count = digit_counts[display.entity.name]
 
-    if value == "off" then
+    if #characters == 0 then
         -- Set this display to 'off'
-        set_arithmetic_combinators(display, (sprite_count == 1) and { "off" } or { "off", "off" })
-    elseif #value < sprite_count then
+        set_arithmetic_combinators(display, (sprite_count == 1) and { nil } or { nil, nil })
+    elseif #characters < sprite_count then
         -- Display the last digit
-        set_arithmetic_combinators(display, { "off", value:sub(-1) })
-    elseif #value >= sprite_count then
+        set_arithmetic_combinators(display, { nil, characters[#characters] })
+    elseif #characters >= sprite_count then
         -- Display the rightmost `sprite_count` digits
         set_arithmetic_combinators(
             display,
-            (sprite_count == 1) and { value:sub(-1) } or { value:sub(-2, -2), value:sub(-1) }
+            (sprite_count == 1)
+            and { characters[#characters] }
+            or { characters[#characters - 1], characters[#characters] }
         )
     end
 
@@ -127,28 +129,18 @@ local function draw_value(display, value)
             return
         end
 
-        local remaining_value
-        if value == "off" then
-            remaining_value = "off"
-        else
-            remaining_value = value:sub(1, -(sprite_count + 1))
-            if remaining_value == "" then
-                remaining_value = "off"
-            end
+        local remaining_characters = helpers.table_copy(characters)
+        for _ = 1, sprite_count do
+            table.remove(remaining_characters)
         end
 
-
-        if next_display.remaining_value == remaining_value then
+        if helpers.tables_equal(remaining_characters, next_display.remaining_characters or {}) then
             return
         else
-            next_display.remaining_value = remaining_value
+            next_display.remaining_characters = remaining_characters
         end
 
-        if remaining_value == "off" then
-            draw_value(next_display, "off")
-        else
-            draw_value(next_display, remaining_value)
-        end
+        display_characters(next_display, remaining_characters)
     end
 end
 
@@ -167,7 +159,7 @@ local function update_controller(controller)
     local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
 
     if not selected_signal or not has_enough_energy then
-        draw_value(display, "off")
+        display_characters(display, {})
         return
     end
 
@@ -177,7 +169,13 @@ local function update_controller(controller)
         defines.wire_connector_id.circuit_green
     )
 
-    draw_value(display, ("%i"):format(signal_value))
+    local value_table = {}
+    local signal_value_string = tostring(signal_value)
+    for i = 1, #signal_value_string do
+        value_table[i] = signal_value_string:sub(i, i)
+    end
+
+    display_characters(display, value_table)
 end
 
 --- Invalidate the remaining value cache for this and all adjacent Nixie tubes to the east,
@@ -234,7 +232,7 @@ local function configure_nixie_tube(nixie_tube)
                 next_display = neighbor.unit_number
             })
 
-            draw_value(neighbor_display, "off")
+            display_characters(neighbor_display, {})
         end
     end
 

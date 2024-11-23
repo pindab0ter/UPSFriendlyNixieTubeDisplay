@@ -17,6 +17,41 @@ function helpers.table_contains(table, value)
     return false
 end
 
+--- Creates a shallow copy of a table with contiguous integer keys.
+--- @param table table
+function helpers.table_copy(table)
+    local copy = {}
+    for i = 1, #table do
+        copy[i] = table[i]
+    end
+    return copy
+end
+
+--- Performs a shallow comparison of two tables with contiguous integer keys.
+--- @param a table
+--- @param b table
+function helpers.tables_equal(a, b)
+    if a == b then
+        return true
+    end
+
+    if #a == 0 and #b == 0 then
+        return true
+    end
+
+    if #a ~= #b then
+        return false
+    end
+
+    for i = 1, #a do
+        if a[i] ~= b[i] then
+            return false
+        end
+    end
+
+    return true
+end
+
 --- @param entity LuaEntity
 --- @return boolean
 function helpers.is_nixie_tube(entity)

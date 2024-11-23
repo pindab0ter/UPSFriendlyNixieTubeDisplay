@@ -66,7 +66,7 @@ local function set_arithmetic_combinators(display, values)
         local arithmetic_combinator = display.arithmetic_combinators[key]
 
         local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
-        if not value or value == "off" or not has_enough_energy then
+        if not value or not has_enough_energy then
             if arithmetic_combinator and arithmetic_combinator.valid then
                 arithmetic_combinator.destroy()
             end
@@ -95,27 +95,27 @@ local function set_arithmetic_combinators(display, values)
     end
 end
 
---- Display the value on this and adjacent Nixie tubes
+--- Display the characters on this and adjacent Nixie Tubes
 --- @param display NixieTubeDisplay
---- @param value string
-local function draw_value(display, value)
+--- @param characters string
+local function display_characters(display, characters)
     if not (display and display.entity and display.entity.valid) then
         return
     end
 
     local sprite_count = digit_counts[display.entity.name]
 
-    if value == "off" then
+    if characters == "off" then
         -- Set this display to 'off'
-        set_arithmetic_combinators(display, (sprite_count == 1) and { "off" } or { "off", "off" })
-    elseif #value < sprite_count then
+        set_arithmetic_combinators(display, (sprite_count == 1) and { nil } or { nil, nil })
+    elseif #characters < sprite_count then
         -- Display the last digit
-        set_arithmetic_combinators(display, { "off", value:sub(-1) })
-    elseif #value >= sprite_count then
+        set_arithmetic_combinators(display, { nil, characters:sub(-1) })
+    elseif #characters >= sprite_count then
         -- Display the rightmost `sprite_count` digits
         set_arithmetic_combinators(
             display,
-            (sprite_count == 1) and { value:sub(-1) } or { value:sub(-2, -2), value:sub(-1) }
+            (sprite_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
         )
     end
 
@@ -128,15 +128,11 @@ local function draw_value(display, value)
         end
 
         local remaining_value
-        if value == "off" then
+        if #characters <= sprite_count or characters == "off" then
             remaining_value = "off"
         else
-            remaining_value = value:sub(1, -(sprite_count + 1))
-            if remaining_value == "" then
-                remaining_value = "off"
-            end
+            remaining_value = characters:sub(1, -(sprite_count + 1))
         end
-
 
         if next_display.remaining_value == remaining_value then
             return
@@ -144,11 +140,7 @@ local function draw_value(display, value)
             next_display.remaining_value = remaining_value
         end
 
-        if remaining_value == "off" then
-            draw_value(next_display, "off")
-        else
-            draw_value(next_display, remaining_value)
-        end
+        display_characters(next_display, remaining_value)
     end
 end
 
@@ -167,7 +159,7 @@ local function update_controller(controller)
     local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
 
     if not selected_signal or not has_enough_energy then
-        draw_value(display, "off")
+        display_characters(display, "off")
         return
     end
 
@@ -177,14 +169,13 @@ local function update_controller(controller)
         defines.wire_connector_id.circuit_green
     )
 
-    draw_value(display, ("%i"):format(signal_value))
+    display_characters(display, ("%i"):format(signal_value))
 end
 
---- Invalidate the remaining value cache for this and all adjacent Nixie tubes to the east,
---- causing the value to be redrawn
----
+--- Invalidate the remaining characters cache for this and all adjacent Nixie tubes to the
+--- east, causing the value to be redrawn
 --- @param display NixieTubeDisplay
-function invalidate_remaining_value_cache(display)
+local function invalidate_cache(display)
     if not display then
         return
     end
@@ -193,7 +184,7 @@ function invalidate_remaining_value_cache(display)
 
     for _, other_display in pairs(storage.displays) do
         if other_display.next_display == display.entity.unit_number then
-            invalidate_remaining_value_cache(other_display)
+            invalidate_cache(other_display)
         end
     end
 end
@@ -234,7 +225,7 @@ local function configure_nixie_tube(nixie_tube)
                 next_display = neighbor.unit_number
             })
 
-            draw_value(neighbor_display, "off")
+            display_characters(neighbor_display, "off")
         end
     end
 
@@ -253,7 +244,7 @@ local function configure_nixie_tube(nixie_tube)
             })
 
             -- Otherwise the display will not render until the value of the display to the east changes
-            invalidate_remaining_value_cache(neighbor_display)
+            invalidate_cache(neighbor_display)
         end
     end
 

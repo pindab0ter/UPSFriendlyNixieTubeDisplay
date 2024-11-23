@@ -10,7 +10,7 @@
     - [x] Fix UI not responding on fresh save
 - [x] Rewrite rendering code
   - [x] Add sprite caching back in
-  - [ ] Further improve performance if possible
+  - [x] Further improve performance if possible
   - [x] Fix z-fighting
 - [x] Fix circuit connection visuals
 - [x] Fix "Turned off during daytime" in popup on hover
@@ -20,12 +20,14 @@
 
 ## Should
 
+- [ ] Improve performance of configure_nixie_tube
 - [ ] Improve sprite resolution
 - [ ] Rename entities both in code and localisation
   - [ ] 'Old Nixie Tube' to either 'Classic Nixie Tube'
   - [ ] 'Nixie Tube' to 'Reinforced Nixie Tube'
   - [ ] Write migrations
 - [ ] Improve phrasing and naming for settings
+  - [ ] Remove update_delay setting?
 - [x] Split up GUI and controller code
 
 ## Could

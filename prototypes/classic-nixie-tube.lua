@@ -1,7 +1,7 @@
 require("util")
 local common = require("common")
 
-circuit_connector_definitions["old-nixie-tube"] = circuit_connector_definitions.create_single(
+circuit_connector_definitions["classic-nixie-tube"] = circuit_connector_definitions.create_single(
     belt_connector_template,
     {
         variation = 1,
@@ -13,7 +13,7 @@ circuit_connector_definitions["old-nixie-tube"] = circuit_connector_definitions.
 
 local function build_sprite(character)
     local orientation = {
-        filename = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube-numbers.png",
+        filename = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-numbers.png",
         width = 27,
         height = 45,
         scale = 1,
@@ -33,7 +33,7 @@ end
 data:extend {
     {
         type = "recipe",
-        name = "SNTD-old-nixie-tube",
+        name = "classic-nixie-tube",
         enabled = false,
         energy_required = 3,
         ingredients = {
@@ -42,24 +42,24 @@ data:extend {
             { type = "item", name = "copper-cable",       amount = 10 },
         },
         results = {
-            { type = "item", name = "SNTD-old-nixie-tube", amount = 1 }
+            { type = "item", name = "classic-nixie-tube", amount = 1 }
         },
     },
     {
         type = "item",
-        name = "SNTD-old-nixie-tube",
-        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube-icon.png",
+        name = "classic-nixie-tube",
+        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-icon.png",
         icon_size = 32,
         subgroup = "circuit-network",
         order = "c-a-a",
-        place_result = "SNTD-old-nixie-tube",
+        place_result = "classic-nixie-tube",
         stack_size = 50
     },
     {
         type = "lamp",
-        name = "SNTD-old-nixie-tube",
+        name = "classic-nixie-tube",
         order = "z[zebra]",
-        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube/icon.png",
+        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-icon.png",
         icon_size = 32,
         collision_box = {
             { x = -0.35, y = -0.35 },
@@ -73,7 +73,7 @@ data:extend {
         minable = {
             hardness = 0.1,
             mining_time = 0.5,
-            result = "SNTD-old-nixie-tube"
+            result = "classic-nixie-tube"
         },
         max_health = 35,
         resistances = {
@@ -90,7 +90,7 @@ data:extend {
             height = 1,
         },
         picture_off = {
-            filename = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube-base.png",
+            filename = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-base.png",
             priority = "high",
             width = 64,
             height = 55,
@@ -106,7 +106,7 @@ data:extend {
         },
         light = common.empty_light,
         circuit_connector = {
-            sprites = circuit_connector_definitions["old-nixie-tube"].sprites,
+            sprites = circuit_connector_definitions["classic-nixie-tube"].sprites,
             points = {
                 wire = {
                     green = util.by_pixel_hr(17, 13),
@@ -136,8 +136,8 @@ data:extend {
     },
     {
         type                           = "arithmetic-combinator",
-        name                           = "SNTD-old-nixie-tube-sprite",
-        icon                           = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube-icon.png",
+        name                           = "classic-nixie-tube-sprite",
+        icon                           = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-icon.png",
         icon_size                      = 32,
         flags                          = {
             "placeable-off-grid",
@@ -151,7 +151,7 @@ data:extend {
             "not-in-kill-statistics",
             "not-in-made-in",
         },
-        minable                        = { hardness = 0.0, mining_time = 0.0, result = "SNTD-old-nixie-tube" },
+        minable                        = { hardness = 0.0, mining_time = 0.0, result = "classic-nixie-tube" },
         max_health                     = 1,
         order                          = "z[zebra]",
 

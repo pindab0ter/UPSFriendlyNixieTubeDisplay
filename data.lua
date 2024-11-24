@@ -1,4 +1,4 @@
-require("prototypes.old-nixie-tube")
-require("prototypes.nixie-tube")
-require("prototypes.nixie-tube-small")
+require("prototypes.classic-nixie-tube")
+require("prototypes.reinforced-nixie-tube")
+require("prototypes.small-reinforced-nixie-tube")
 require("prototypes.technology")

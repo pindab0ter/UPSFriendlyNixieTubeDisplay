@@ -1,23 +1,23 @@
 require("util")
 local common = require("common")
 
-circuit_connector_definitions["nixie-tube-small"] = circuit_connector_definitions.create_single(
-    belt_connector_template,
+circuit_connector_definitions["reinforced-nixie-tube"] = circuit_connector_definitions.create_single(
+    universal_connector_template,
     {
-        variation = 1,
-        main_offset = util.by_pixel(1, -29),
-        shadow_offset = util.by_pixel(19, -8),
-        show_shadow = true,
+        variation = 26,
+        main_offset = util.by_pixel(2, 22.0),
+        shadow_offset = util.by_pixel(2, 22.0),
+        show_shadow = true
     }
 )
 
 local function build_sprite(character)
     local orientation = {
-        filename = "__UPSFriendlyNixieTubeDisplay__/graphics/nixie-tube-numbers.png",
+        filename = "__UPSFriendlyNixieTubeDisplay__/graphics/reinforced-nixie-tube-numbers.png",
         width = 20,
         height = 44,
-        scale = 0.5,
-        shift = util.by_pixel(-6, -4),
+        scale = 1,
+        shift = util.by_pixel(0, -6),
         x = 20 * common.sprite_positions[character],
         y = 0,
     }
@@ -33,47 +33,47 @@ end
 data:extend {
     {
         type = "recipe",
-        name = "SNTD-nixie-tube-small",
+        name = "reinforced-nixie-tube",
         enabled = false,
         energy_required = 5,
         ingredients = {
-            { type = "item", name = "SNTD-old-nixie-tube", amount = 2 },
-            { type = "item", name = "steel-plate",         amount = 3 },
-            { type = "item", name = "iron-stick",          amount = 10 },
+            { type = "item", name = "classic-nixie-tube", amount = 1 },
+            { type = "item", name = "steel-plate",        amount = 3 },
+            { type = "item", name = "iron-stick",         amount = 10 },
         },
         results = {
-            { type = "item", name = "SNTD-nixie-tube-small", amount = 1 }
+            { type = "item", name = "reinforced-nixie-tube", amount = 1 }
         }
     },
     {
         type = "item",
-        name = "SNTD-nixie-tube-small",
-        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/nixie-tube-small-icon.png",
+        name = "reinforced-nixie-tube",
+        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/reinforced-nixie-tube-icon.png",
         icon_size = 32,
         subgroup = "circuit-network",
-        order = "c-a-c",
-        place_result = "SNTD-nixie-tube-small",
+        order = "c-a-b",
+        place_result = "reinforced-nixie-tube",
         stack_size = 50
     },
     {
         type = "lamp",
-        name = "SNTD-nixie-tube-small",
+        name = "reinforced-nixie-tube",
         order = "z[zebra]",
-        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/nixie-tube-small-icon.png",
+        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/reinforced-nixie-tube-icon.png",
         icon_size = 32,
         collision_box = {
-            { x = -0.35, y = -0.35 },
-            { x = 0.35,  y = 0.35 }
+            { x = -0.35, y = -0.85 },
+            { x = 0.35,  y = 0.85 }
         },
         selection_box = {
-            { x = -0.5, y = -0.5 },
-            { x = 0.5,  y = 0.5 }
+            { -0.5, -1.0 },
+            { 0.5,  1.0 }
         },
         flags = { "placeable-neutral", "player-creation", "not-on-map" },
         minable = {
             hardness = 0.2,
             mining_time = 0.5,
-            result = "SNTD-nixie-tube-small"
+            result = "reinforced-nixie-tube"
         },
         max_health = 200,
         resistances = {
@@ -94,14 +94,14 @@ data:extend {
             height = 1,
         },
         picture_off = {
-            filename = "__UPSFriendlyNixieTubeDisplay__/graphics/nixie-tube-small-base.png",
+            filename = "__UPSFriendlyNixieTubeDisplay__/graphics/reinforced-nixie-tube-base.png",
             priority = "high",
-            width = 48,
-            height = 42,
+            width = 40,
+            height = 64,
             frame_count = 1,
             axially_symmetrical = false,
             direction_count = 1,
-            shift = util.by_pixel(8, -6),
+            shift = util.by_pixel(4, 0)
         },
         energy_usage_per_tick = "4kW",
         energy_source = {
@@ -109,19 +109,7 @@ data:extend {
             usage_priority = "secondary-input",
         },
         light = common.empty_light,
-        circuit_connector = {
-            sprites = circuit_connector_definitions["nixie-tube-small"].sprites,
-            points = {
-                wire = {
-                    green = util.by_pixel(13.5, -19),
-                    red = util.by_pixel(13, -25),
-                },
-                shadow = {
-                    green = util.by_pixel(27, -8),
-                    red = util.by_pixel(31, -8),
-                },
-            },
-        },
+        circuit_connector = circuit_connector_definitions["reinforced-nixie-tube"],
         circuit_wire_max_distance = 8,
         created_effect = {
             type = "direct",
@@ -140,8 +128,8 @@ data:extend {
     },
     {
         type                           = "arithmetic-combinator",
-        name                           = "SNTD-nixie-tube-small-sprite",
-        icon                           = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube-icon.png",
+        name                           = "reinforced-nixie-tube-sprite",
+        icon                           = "__UPSFriendlyNixieTubeDisplay__/graphics/reinforced-nixie-tube-icon.png",
         icon_size                      = 32,
         flags                          = {
             "placeable-off-grid",
@@ -155,7 +143,7 @@ data:extend {
             "not-in-kill-statistics",
             "not-in-made-in",
         },
-        minable                        = { hardness = 0.0, mining_time = 0.0, result = "SNTD-old-nixie-tube" },
+        minable                        = { hardness = 0.0, mining_time = 0.0, result = "reinforced-nixie-tube" },
         max_health                     = 1,
         order                          = "z[zebra]",
 

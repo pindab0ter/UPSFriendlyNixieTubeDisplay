@@ -34,9 +34,9 @@ storage = {
 }
 
 local digit_counts = {
-    ['SNTD-old-nixie-tube'] = 1,
-    ['SNTD-nixie-tube'] = 1,
-    ['SNTD-nixie-tube-small'] = 2
+    ['classic-nixie-tube'] = 1,
+    ['reinforced-nixie-tube'] = 1,
+    ['small-reinforced-nixie-tube'] = 2
 }
 
 local state_display = {
@@ -288,9 +288,9 @@ local function reconfigure_nixie_tubes()
     for _, surface in pairs(game.surfaces) do
         local arithmetic_combinators = surface.find_entities_filtered {
             name = {
-                "SNTD-old-nixie-tube-sprite",
-                "SNTD-nixie-tube-sprite",
-                "SNTD-nixie-tube-small-sprite"
+                "classic-nixie-tube-sprite",
+                "reinforced-nixie-tube-sprite",
+                "small-reinforced-nixie-tube-sprite"
             },
         }
 
@@ -302,9 +302,9 @@ local function reconfigure_nixie_tubes()
 
         local nixie_tubes = surface.find_entities_filtered {
             name = {
-                "SNTD-old-nixie-tube",
-                "SNTD-nixie-tube",
-                "SNTD-nixie-tube-small"
+                "classic-nixie-tube",
+                "reinforced-nixie-tube",
+                "small-reinforced-nixie-tube"
             }
         }
 

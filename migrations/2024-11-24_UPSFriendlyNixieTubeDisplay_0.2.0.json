@@ -1,0 +1,24 @@
+{
+  "recipe": [
+    ["SNTD-old-nixie-tube", "classic-nixie-tube"],
+    ["SNTD-nixie-tube", "reinforced-nixie-tube"],
+    ["SNTD-nixie-tube-small", "small-reinforced-nixie-tube"]
+  ],
+  "entity": [
+    ["SNTD-old-nixie-tube", "classic-nixie-tube"],
+    ["SNTD-old-nixie-tube-sprite", "classic-nixie-tube-sprite"],
+    ["SNTD-nixie-tube", "reinforced-nixie-tube"],
+    ["SNTD-nixie-tube-sprite", "reinforced-nixie-tube-sprite"],
+    ["SNTD-nixie-tube-small", "small-reinforced-nixie-tube"],
+    ["SNTD-nixie-tube-small-sprite", "small-reinforced-nixie-tube-sprite"]
+  ],
+  "item": [
+    ["SNTD-old-nixie-tube", "classic-nixie-tube"],
+    ["SNTD-nixie-tube", "reinforced-nixie-tube"],
+    ["SNTD-nixie-tube-small", "small-reinforced-nixie-tube"]
+  ],
+  "technology": [
+    ["SNTD-nixie-tubes-1", "classic-nixie-tubes"],
+    ["SNTD-nixie-tubes-2", "reinforced-nixie-tubes"]
+  ]
+}

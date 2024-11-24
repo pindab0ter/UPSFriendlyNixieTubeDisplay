@@ -1,9 +1,9 @@
 local helpers = {}
 
 local entity_names = {
-    'SNTD-old-nixie-tube',
-    'SNTD-nixie-tube',
-    'SNTD-nixie-tube-small'
+    'classic-nixie-tube',
+    'reinforced-nixie-tube',
+    'small-reinforced-nixie-tube'
 }
 
 ---@param table table

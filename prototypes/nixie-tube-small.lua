@@ -5,8 +5,8 @@ circuit_connector_definitions["nixie-tube-small"] = circuit_connector_definition
     belt_connector_template,
     {
         variation = 1,
-        main_offset = util.by_pixel(7, 7),
-        shadow_offset = util.by_pixel(7, 7),
+        main_offset = util.by_pixel(1, -29),
+        shadow_offset = util.by_pixel(19, -8),
         show_shadow = true,
     }
 )

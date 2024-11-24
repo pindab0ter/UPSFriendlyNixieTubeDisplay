@@ -419,9 +419,18 @@ local function on_script_trigger_effect(event)
     end
 
     local entity = event.cause_entity
-    if entity then
-        configure_nixie_tube(entity)
+
+    if not entity then
+        return
     end
+
+    local control_behavior = entity.get_or_create_control_behavior() --[[@as LuaLampControlBehavior?]]
+
+    if control_behavior then
+        control_behavior.circuit_enable_disable = true
+    end
+
+    configure_nixie_tube(entity)
 end
 
 --- @param event EventData.on_runtime_mod_setting_changed

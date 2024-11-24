@@ -5,8 +5,8 @@ circuit_connector_definitions["nixie-tube"] = circuit_connector_definitions.crea
     universal_connector_template,
     {
         variation = 26,
-        main_offset = util.by_pixel(5.5, 24.0),
-        shadow_offset = util.by_pixel(5.0, 24.0),
+        main_offset = util.by_pixel(2, 22.0),
+        shadow_offset = util.by_pixel(2, 22.0),
         show_shadow = true
     }
 )

@@ -17,7 +17,7 @@ local function build_sprite(character)
         width = 20,
         height = 44,
         scale = 1,
-        shift = util.by_pixel(0, -2),
+        shift = util.by_pixel(0, -6),
         x = 20 * common.sprite_positions[character],
         y = 0,
     }

@@ -72,7 +72,7 @@ local function set_arithmetic_combinators(display, values)
                 arithmetic_combinator.destroy()
             end
             display.arithmetic_combinators[key] = nil
-            return
+            goto continue
         end
 
         if not (arithmetic_combinator and arithmetic_combinator.valid) then
@@ -102,6 +102,8 @@ local function set_arithmetic_combinators(display, values)
         local parameters = control_behavior.parameters
         parameters.operation = state_display[value]
         control_behavior.parameters = parameters
+
+        ::continue::
     end
 end
 

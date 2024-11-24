@@ -29,10 +29,8 @@ storage = {
     gui = {},
 
     --- @type number
-    update_delay = tonumber(settings.global["nixie-update-delay"].value) or error("nixie-update-delay not set"),
-
-    --- @type number
-    update_speed = tonumber(settings.global["nixie-tube-update-speed"].value) or error("nixie-tube-update-speed not set"),
+    controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value) or
+        error("nixie-tube-group-updates-per-tick not set"),
 }
 
 local digit_counts = {
@@ -341,28 +339,21 @@ filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 -- Event handlers --
 --------------------
 
---- @param event EventData.on_tick
-local function on_tick(event)
-    if storage.update_delay ~= 0 and event.tick % storage.update_delay ~= 0 then
-        -- Only update every `update_delay` ticks
-        return
-    end
-
-    for _ = 1, storage.update_speed do
+--- @param _ EventData.on_tick
+local function on_tick(_)
+    for _ = 1, storage.controller_updates_per_tick do
         local controller
 
+        -- If the next controller is not known, start from the beginning
         if storage.next_controller and not storage.controllers[storage.next_controller] then
-            -- Calling `next()` with `nil` as the second argument will return the first element of the table
             storage.next_controller = nil
         end
 
         storage.next_controller, controller = next(storage.controllers, storage.next_controller)
 
-        if not controller then
-            return
+        if controller ~= nil then
+            update_controller(controller)
         end
-
-        update_controller(controller)
     end
 end
 
@@ -437,16 +428,13 @@ end
 
 --- @param event EventData.on_runtime_mod_setting_changed
 local function on_runtime_mod_setting_changed(event)
-    if event.setting == "nixie-update-delay" then
-        storage.update_delay = tonumber(settings.global["nixie-update-delay"].value)
-    elseif event.setting == "nixie-tube-update-speed" then
-        storage.update_speed = tonumber(settings.global["nixie-tube-update-speed"].value)
+    if event.setting == "nixie-tube-group-updates-per-tick" then
+        storage.controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value)
     end
 end
 
 script.on_configuration_changed(function ()
-    storage.update_delay = tonumber(settings.global["nixie-update-delay"].value)
-    storage.update_speed = tonumber(settings.global["nixie-tube-update-speed"].value)
+    storage.controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value)
 
     reconfigure_nixie_tubes()
 end)

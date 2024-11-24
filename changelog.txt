@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.0
+  Features:
+    - Factorio 2.0 compatibility
+    - Added support for negative numbers
+    - Added a simple GUI for setting the circuit network signal
+    - Improved wire connection visuals
+    - Made it even more FPS friendly
+    - Cleaned up the code to make it readable
+---------------------------------------------------------------------------------------------------
 Version: 0.1.19
   Features:
     - dedebugger

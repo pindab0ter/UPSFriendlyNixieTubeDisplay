@@ -23,13 +23,13 @@
 
 - [ ] Improve performance of configure_nixie_tube
 - [ ] New art
-- [ ] Rename entities both in code and localisation
-  - [ ] 'Old Nixie Tube' to either 'Classic Nixie Tube'
-  - [ ] 'Nixie Tube' to 'Reinforced Nixie Tube'
-  - [ ] Write migrations
-- [ ] Improve phrasing and naming for settings
-  - [ ] Remove update_delay setting?
-- [ ] Figure out why activity light works for Classix Nixie Tube, but not the other ones
+- [x] Rename entities both in code and localisation
+  - [x] 'Old Nixie Tube' to either 'Classic Nixie Tube'
+  - [x] 'Nixie Tube' to 'Reinforced Nixie Tube'
+  - [x] Write migrations
+- [x] Improve phrasing and naming for settings
+  - [x] Remove update_delay setting?
+- [x] Figure out why activity light works for Classix Nixie Tube, but not the other ones
 - [x] Split up GUI and controller code
 
 ## Could
@@ -38,5 +38,6 @@
   - [ ] Find out how to trigger close_sound
   - [ ] Add open sound only when opening GUI
 - [ ] Prevent opening the GUI again if it is already open
+- [x] Show the Nixie Tube preview in the GUI with rendered digits
 
 ## Won't

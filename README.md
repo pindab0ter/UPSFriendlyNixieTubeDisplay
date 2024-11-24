@@ -1,14 +1,32 @@
-This is a fork of Santa's Nixie Tubes [original mod](https://mods.factorio.com/mod/SantasNixieTubeDisplay), to add more UPS options.
+This is a fork of Santa's Nixie Tubes [original mod](https://mods.factorio.com/mod/SantasNixieTubeDisplay) that has better performance and other improvements.
 
-- Allows skipping frames to improve UPS.
-- It doesn't use tanks as sprites for the numbers, so it will even show up nice on the mini map.
-- It doesn't use characters for colors, so no ups drops from lots of characters on the map
-- Only positive numbers (negative numbers will show up as positive numbers at this time)
-- No colors (Nixies are originaly orange from the heated metal, maybe i'll look into adding this feature)
+Download the mod from the [Factorio Mods Portal](https://mods.factorio.com/mod/UPSFriendlyNixieTubeDisplay)
 
-# Changelog
-### Future
+## Features
 
-### Latest release
-+ Added frame skip option.
-+ added support for other mods creating nixies via script.
+- Chain multiple Nixie Tubes to display large numbers
+- Supports negative numbers
+- Has a simple GUI to choose the signal
+- Performance improvements
+  - It doesn't rerender numbers that haven't changed
+  - It doesn't use tanks as sprites for the numbers, so it will even show up nice on the mini map.
+  - It doesn't use characters for colors, so no ups drops from lots of characters on the map
+  - No colors (Nixies are orange from the heated filament)
+
+## Usage
+
+- Research the technology
+- Place one or multiple Nixie Tubes in a row to display larger numbers
+- Connect a wire to the rightmost Nixie Tube in a row and choose a signal
+
+## Changelog
+
+[changelog.txt](changelog.txt)
+
+## Contributing
+
+Feel free to submit issues and pull requests if you have suggestions or improvements.
+
+## License
+
+This project is licensed under the MIT License.

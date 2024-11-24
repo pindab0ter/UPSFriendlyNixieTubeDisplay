@@ -1,5 +1,21 @@
 common = {}
 
+---@type table<string, number>
+common.sprite_positions = {
+    [" "] = 0,
+    ["0"] = 1,
+    ["1"] = 2,
+    ["2"] = 3,
+    ["3"] = 4,
+    ["4"] = 5,
+    ["5"] = 6,
+    ["6"] = 7,
+    ["7"] = 8,
+    ["8"] = 9,
+    ["9"] = 10,
+    ["-"] = 11,
+}
+
 ---@type data.Vector
 common.empty_vector = { x = 0, y = 0 }
 
@@ -49,6 +65,13 @@ common.empty_wire_position = {
 common.empty_wire_connection_point = {
     wire = common.empty_wire_position,
     shadow = common.empty_wire_position,
+}
+
+common.empty_wire_connection_points = {
+    common.empty_wire_connection_point,
+    common.empty_wire_connection_point,
+    common.empty_wire_connection_point,
+    common.empty_wire_connection_point,
 }
 
 return common

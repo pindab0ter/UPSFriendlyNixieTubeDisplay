@@ -1,13 +1,30 @@
-require "util"
-local common = require "common"
+require("util")
+local common = require("common")
 
-local function build_sprite(value)
+local function build_sprite(character)
+    local positions = {
+        [" "] = 0,
+        ["0"] = 1,
+        ["1"] = 2,
+        ["2"] = 3,
+        ["3"] = 4,
+        ["4"] = 5,
+        ["5"] = 6,
+        ["6"] = 7,
+        ["7"] = 8,
+        ["8"] = 9,
+        ["9"] = 10,
+        ["-"] = 11,
+    }
+
     local orientation = {
-        filename = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube/" .. value .. ".png",
+        filename = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube-numbers.png",
         width = 27,
         height = 45,
         scale = 1,
         shift = { x = 0, y = -0.5 },
+        x = 0,
+        y = 45 * positions[character],
     }
 
     return util.table.deepcopy({
@@ -171,9 +188,9 @@ data:extend {
         xor_symbol_sprites             = build_sprite("9"),
 
         input_connection_bounding_box  = common.empty_bounding_box,
-        input_connection_points        = common.empty_wire_connection_point,
+        input_connection_points        = common.empty_wire_connection_points,
         output_connection_bounding_box = common.empty_bounding_box,
-        output_connection_points       = common.empty_wire_connection_point,
+        output_connection_points       = common.empty_wire_connection_points,
 
         circuit_wire_max_distance      = 0,
     }

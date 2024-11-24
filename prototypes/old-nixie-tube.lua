@@ -12,21 +12,6 @@ circuit_connector_definitions["old-nixie-tube"] = circuit_connector_definitions.
 )
 
 local function build_sprite(character)
-    local positions = {
-        [" "] = 0,
-        ["0"] = 1,
-        ["1"] = 2,
-        ["2"] = 3,
-        ["3"] = 4,
-        ["4"] = 5,
-        ["5"] = 6,
-        ["6"] = 7,
-        ["7"] = 8,
-        ["8"] = 9,
-        ["9"] = 10,
-        ["-"] = 11,
-    }
-
     local orientation = {
         filename = "__UPSFriendlyNixieTubeDisplay__/graphics/old-nixie-tube-numbers.png",
         width = 27,
@@ -34,7 +19,7 @@ local function build_sprite(character)
         scale = 1,
         shift = { x = 0, y = -0.5 },
         x = 0,
-        y = 45 * positions[character],
+        y = 45 * common.sprite_positions[character],
     }
 
     return util.table.deepcopy({
@@ -128,10 +113,10 @@ data:extend {
                     red = util.by_pixel_hr(17, 13),
                 },
                 shadow = {
-                    green = util.by_pixel_hr(17, 25),
-                    red = util.by_pixel_hr(17, 25),
-                }
-            }
+                    green = util.by_pixel_hr(25, 13),
+                    red = util.by_pixel_hr(25, 13),
+                },
+            },
         },
         circuit_wire_max_distance = 8,
         created_effect = {

@@ -15,20 +15,21 @@
 - [x] Fix circuit connection visuals
 - [x] Fix "Turned off during daytime" in popup on hover
 - [x] Fix memory leak when removing Nixie Tubes
-- [ ] Implement small and big reinforced Nixie Tubes
+- [x] Implement small and big reinforced Nixie Tubes
 - [x] Test upgrade to 2.0 path
 - [x] Fix upgrade to 2.0 path
 
 ## Should
 
 - [ ] Improve performance of configure_nixie_tube
-- [ ] Improve sprite resolution
+- [ ] New art
 - [ ] Rename entities both in code and localisation
   - [ ] 'Old Nixie Tube' to either 'Classic Nixie Tube'
   - [ ] 'Nixie Tube' to 'Reinforced Nixie Tube'
   - [ ] Write migrations
 - [ ] Improve phrasing and naming for settings
   - [ ] Remove update_delay setting?
+- [ ] Figure out why activity light works for Classix Nixie Tube, but not the other ones
 - [x] Split up GUI and controller code
 
 ## Could

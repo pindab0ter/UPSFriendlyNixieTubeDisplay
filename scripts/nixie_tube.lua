@@ -65,8 +65,7 @@ local function set_arithmetic_combinators(display, values)
         --- @type LuaEntity?
         local arithmetic_combinator = display.arithmetic_combinators[key]
 
-        local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
-        if not value or not has_enough_energy then
+        if value == nil then
             if arithmetic_combinator and arithmetic_combinator.valid then
                 arithmetic_combinator.destroy()
             end
@@ -75,9 +74,18 @@ local function set_arithmetic_combinators(display, values)
         end
 
         if not (arithmetic_combinator and arithmetic_combinator.valid) then
+            local position = display.entity.position
+
+            -- Small Nixie Tube Display
+            if #values == 2 then
+                if key == 2 then
+                    position.x = position.x + 12 / 32
+                end
+            end
+
             arithmetic_combinator = display.entity.surface.create_entity {
                 name = display.entity.name .. "-sprite",
-                position = display.entity.position,
+                position = position,
                 force = display.entity.force,
             }
 

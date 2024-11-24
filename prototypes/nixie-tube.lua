@@ -12,28 +12,13 @@ circuit_connector_definitions["nixie-tube"] = circuit_connector_definitions.crea
 )
 
 local function build_sprite(character)
-    local positions = {
-        [" "] = 0,
-        ["0"] = 1,
-        ["1"] = 2,
-        ["2"] = 3,
-        ["3"] = 4,
-        ["4"] = 5,
-        ["5"] = 6,
-        ["6"] = 7,
-        ["7"] = 8,
-        ["8"] = 9,
-        ["9"] = 10,
-        ["-"] = 11,
-    }
-
     local orientation = {
         filename = "__UPSFriendlyNixieTubeDisplay__/graphics/nixie-tube-numbers.png",
         width = 20,
         height = 44,
         scale = 1,
         shift = util.by_pixel(0, -2),
-        x = 20 * positions[character],
+        x = 20 * common.sprite_positions[character],
         y = 0,
     }
 

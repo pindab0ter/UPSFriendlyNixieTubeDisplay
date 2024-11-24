@@ -65,7 +65,7 @@ local function set_arithmetic_combinators(display, values)
         --- @type LuaEntity?
         local arithmetic_combinator = display.arithmetic_combinators[key]
 
-        if value == nil then
+        if value == "off" then
             if arithmetic_combinator and arithmetic_combinator.valid then
                 arithmetic_combinator.destroy()
             end
@@ -115,10 +115,10 @@ local function display_characters(display, characters)
 
     if characters == "off" then
         -- Set this display to 'off'
-        set_arithmetic_combinators(display, (sprite_count == 1) and { nil } or { nil, nil })
+        set_arithmetic_combinators(display, (sprite_count == 1) and { "off" } or { "off", "off" })
     elseif #characters < sprite_count then
         -- Display the last digit
-        set_arithmetic_combinators(display, { nil, characters:sub(-1) })
+        set_arithmetic_combinators(display, { "off", characters:sub(-1) })
     elseif #characters >= sprite_count then
         -- Display the rightmost `sprite_count` digits
         set_arithmetic_combinators(

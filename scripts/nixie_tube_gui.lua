@@ -42,7 +42,6 @@ function nixie_tube_gui.update_gui(self, new_entity)
     end
 
     if new_entity then
-        self.elements.entity_preview.entity = new_entity
         self.entity = new_entity
     end
 end
@@ -107,11 +106,15 @@ function nixie_tube_gui.create_nixie_tube_gui(player, entity)
                 type = "frame",
                 style = "deep_frame_in_shallow_frame",
                 {
-                    type = "entity-preview",
-                    name = "entity_preview",
-                    style = "wide_entity_button",
-                    elem_mods = { entity = entity },
-                },
+                    type = "camera",
+                    position = entity.name == "classic-nixie-tube" and {
+                        x = entity.position.x,
+                        y = entity.position.y - 0.35,
+                    } or entity.position,
+                    surface_index = entity.surface.index,
+                    zoom = 2,
+                    style_mods = { width = 125, height = 150 },
+                }
             },
             {
                 type = "flow",

@@ -113,8 +113,8 @@ data:extend {
                     red = util.by_pixel_hr(17, 13),
                 },
                 shadow = {
-                    green = util.by_pixel_hr(25, 13),
-                    red = util.by_pixel_hr(25, 13),
+                    green = util.by_pixel_hr(22, 20),
+                    red = util.by_pixel_hr(22, 20),
                 },
             },
         },

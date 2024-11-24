@@ -37,9 +37,9 @@ data:extend {
         enabled = false,
         energy_required = 5,
         ingredients = {
-            { type = "item", name = "small-reinforced-nixie-tube", amount = 2 },
-            { type = "item", name = "steel-plate",                 amount = 3 },
-            { type = "item", name = "iron-stick",                  amount = 10 },
+            { type = "item", name = "reinforced-nixie-tube", amount = 2 },
+            { type = "item", name = "steel-plate",           amount = 3 },
+            { type = "item", name = "iron-stick",            amount = 10 },
         },
         results = {
             { type = "item", name = "small-reinforced-nixie-tube", amount = 1 }

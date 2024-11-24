@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.1
+Date: 2024-11-24
+  Fixed:
+    - Small Reinforced Nixie Tube recipe now requires the correct items
+---------------------------------------------------------------------------------------------------
 Version: 0.2.0
+Date: 2024-11-24
   Features:
     - Factorio 2.0 compatibility
     - Added support for negative numbers

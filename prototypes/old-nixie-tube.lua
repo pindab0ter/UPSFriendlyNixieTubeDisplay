@@ -1,6 +1,16 @@
 require("util")
 local common = require("common")
 
+circuit_connector_definitions["old-nixie-tube"] = circuit_connector_definitions.create_single(
+    belt_connector_template,
+    {
+        variation = 1,
+        main_offset = util.by_pixel(0, 0),
+        shadow_offset = util.by_pixel(0, 0),
+        show_shadow = true,
+    }
+)
+
 local function build_sprite(character)
     local positions = {
         [" "] = 0,
@@ -111,7 +121,7 @@ data:extend {
         },
         light = common.empty_light,
         circuit_connector = {
-            sprites = common.empty_sprites,
+            sprites = circuit_connector_definitions["old-nixie-tube"].sprites,
             points = {
                 wire = {
                     green = util.by_pixel_hr(17, 13),

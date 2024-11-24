@@ -1,6 +1,16 @@
 require("util")
 local common = require("common")
 
+circuit_connector_definitions["nixie-tube"] = circuit_connector_definitions.create_single(
+    universal_connector_template,
+    {
+        variation = 26,
+        main_offset = util.by_pixel(5.5, 24.0),
+        shadow_offset = util.by_pixel(5.0, 24.0),
+        show_shadow = true
+    }
+)
+
 local function build_sprite(character)
     local positions = {
         [" "] = 0,
@@ -114,7 +124,7 @@ data:extend {
             usage_priority = "secondary-input",
         },
         light = common.empty_light,
-        -- circuit_connector = {},
+        circuit_connector = circuit_connector_definitions["nixie-tube"],
         circuit_wire_max_distance = 8,
         created_effect = {
             type = "direct",

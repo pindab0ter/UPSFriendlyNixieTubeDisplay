@@ -4,11 +4,13 @@ local helpers = require("scripts.helpers")
 --- @class NixieTubeController The aspect of a Nixie Tube responsible for controlling a series of Nixie Tubes. Always
 ---   the most eastern Nixie Tube (least significant digit) in a series of Nixie Tubes
 --- @field entity LuaEntity
+--- @field previous_signal SignalID?
+--- @field previous_value int?
 
 --- @class NixieTubeDisplay The aspect of a Nixie Tube responsible for displaying one or two digits
 --- @field entity LuaEntity
 --- @field arithmetic_combinators table<uint, LuaEntity>
---- @field next_display LuaEntity
+--- @field next_display uint?
 --- @field remaining_value string?
 
 storage = {
@@ -164,6 +166,12 @@ local function update_controller(controller)
     end
 
     local selected_signal = helpers.get_selected_signal(controller.entity)
+
+    if controller.previous_signal ~= selected_signal then
+        controller.previous_value = nil
+        controller.previous_signal = selected_signal
+    end
+
     local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
 
     if not selected_signal or not has_enough_energy then
@@ -176,6 +184,12 @@ local function update_controller(controller)
         defines.wire_connector_id.circuit_red,
         defines.wire_connector_id.circuit_green
     )
+
+    if controller.previous_value == signal_value then
+        return
+    else
+        controller.previous_value = signal_value
+    end
 
     display_characters(display, ("%i"):format(signal_value))
 end

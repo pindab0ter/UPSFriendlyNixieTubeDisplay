@@ -6,11 +6,12 @@ local entity_names = {
     'small-reinforced-nixie-tube'
 }
 
+---Determine if a table with contiguous keys has the given value.
 ---@param table table
 ---@return boolean
 function helpers.table_contains(table, value)
-    for _, v in pairs(table) do
-        if v == value then
+    for i = 1, #table do
+        if table[i] == value then
             return true
         end
     end

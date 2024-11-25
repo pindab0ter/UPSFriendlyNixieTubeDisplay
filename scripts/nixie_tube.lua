@@ -343,23 +343,32 @@ filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 local function on_tick(_)
     local first_unit_number_this_tick = storage.next_controller_unit_number
 
-    for _ = 1, storage.controller_updates_per_tick do
-        --- @type NixieTubeController?
-        local controller
-
-        storage.next_controller_unit_number, controller = next(storage.controllers, storage.next_controller_unit_number)
-
-        -- Wrap around to the first controller if we've reached the end of the list
-        if (controller == nil) then
-            storage.next_controller_unit_number, controller = next(storage.controllers)
+    -- Determine which surfaces have players that can see the Nixie Tubes
+    local eyes_on_surface = {}
+    for i = 1, #game.connected_players do
+        local player = game.connected_players[i]
+        if player.render_mode == defines.render_mode.game then
+            eyes_on_surface[player.surface_index] = (eyes_on_surface[player.surface_index] or 0) + 1
         end
+    end
 
+    --- @type NixieTubeController?
+    local controller
+
+    for i = 1, storage.controller_updates_per_tick do
         -- If we've looped back to the first controller which was processed this tick, stop
-        if storage.next_controller_unit_number ~= nil and storage.next_controller_unit_number == first_unit_number_this_tick then
+        if storage.next_controller_unit_number ~= nil and storage.next_controller_unit_number == first_unit_number_this_tick and i ~= 1 then
             break
         end
 
-        if controller ~= nil then
+        storage.next_controller_unit_number, controller = next(storage.controllers, storage.next_controller_unit_number)
+
+        -- Wrap around to the start if we've reached the end
+        if controller == nil then
+            storage.next_controller_unit_number, controller = next(storage.controllers)
+        end
+
+        if eyes_on_surface[controller.entity.surface_index] then
             update_controller(controller)
         end
     end

@@ -354,8 +354,9 @@ local function on_tick(_)
 
     --- @type NixieTubeController?
     local controller
+    local i = 1
 
-    for i = 1, storage.controller_updates_per_tick do
+    while i <= storage.controller_updates_per_tick do
         -- If we've looped back to the first controller which was processed this tick, stop
         if storage.next_controller_unit_number ~= nil and storage.next_controller_unit_number == first_unit_number_this_tick and i ~= 1 then
             break
@@ -368,8 +369,10 @@ local function on_tick(_)
             storage.next_controller_unit_number, controller = next(storage.controllers)
         end
 
+        -- If no player is able to see Nixie Tubes on this surface, skip the update
         if eyes_on_surface[controller.entity.surface_index] then
             update_controller(controller)
+            i = i + 1
         end
     end
 end

@@ -20,7 +20,7 @@ storage = {
 
     --- @type uint? The unit number of the next controller, so we can continue iterating where we left off if the amount
     ---     of controllers is larger than the update speed
-    next_controller = nil,
+    next_controller_unit_number = nil,
 
     --- @type table<uint, NixieTubeDisplay> The displays are the individual Nixie tubes in a series of Nixie tubes. A Nixie Tube can be a display and a controller at the same time
     displays = {},
@@ -232,9 +232,9 @@ local function configure_nixie_tube(nixie_tube)
 
     for _, neighbor in pairs(western_neighbors) do
         if neighbor.valid then
-            if storage.next_controller == neighbor.unit_number then
+            if storage.next_controller_unit_number == neighbor.unit_number then
                 -- If it's currently the next controller, claim that
-                storage.next_controller = nixie_tube.unit_number
+                storage.next_controller_unit_number = nixie_tube.unit_number
             end
 
             local neighbor_control_behavior = neighbor.get_control_behavior() --[[@as LuaLampControlBehavior?]]
@@ -281,7 +281,7 @@ end
 --- Clears the storage, removes all Nixie Tubes and arithmetic combinators, and adds them back in
 local function reconfigure_nixie_tubes()
     storage.controllers = {}
-    storage.next_controller = nil
+    storage.next_controller_unit_number = nil
     storage.displays = {}
     storage.gui = {}
 
@@ -341,20 +341,21 @@ filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 
 --- @param _ EventData.on_tick
 local function on_tick(_)
-    local first_controller_this_tick = storage.next_controller
+    local first_unit_number_this_tick = storage.next_controller_unit_number
 
     for _ = 1, storage.controller_updates_per_tick do
+        --- @type NixieTubeController?
         local controller
 
-        -- If the next controller is not known, start from the beginning
-        if storage.next_controller and not storage.controllers[storage.next_controller] then
-            storage.next_controller = nil
+        storage.next_controller_unit_number, controller = next(storage.controllers, storage.next_controller_unit_number)
+
+        -- Wrap around to the first controller if we've reached the end of the list
+        if (controller == nil) then
+            storage.next_controller_unit_number, controller = next(storage.controllers)
         end
 
-        storage.next_controller, controller = next(storage.controllers, storage.next_controller)
-
         -- If we've looped back to the first controller which was processed this tick, stop
-        if storage.next_controller ~= nil and storage.next_controller == first_controller_this_tick then
+        if storage.next_controller_unit_number ~= nil and storage.next_controller_unit_number == first_unit_number_this_tick then
             break
         end
 
@@ -399,13 +400,13 @@ local function on_object_destroyed(event)
 
         if next_display then
             local controller = helpers.storage_set_controller(next_display.entity)
-            storage.next_controller = controller.entity.unit_number
+            storage.next_controller_unit_number = controller.entity.unit_number
             update_controller(controller)
         else
-            storage.next_controller = nil
+            storage.next_controller_unit_number = nil
         end
     else
-        storage.next_controller = nil
+        storage.next_controller_unit_number = nil
     end
 
     storage.displays[entity.unit_number] = nil
@@ -448,7 +449,7 @@ end)
 
 script.on_init(function ()
     storage.controllers = {}
-    storage.next_controller = nil
+    storage.next_controller_unit_number = nil
     storage.displays = {}
     storage.gui = {}
 

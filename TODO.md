@@ -23,6 +23,8 @@
 
 - [ ] Improve performance of configure_nixie_tube
 - [ ] New art
+- [ ] Do not update Nixie Tubes that are not in view
+  - [ ] Make sure Nixie Tubes are updated even when the controller is out of view
 - [x] Rename entities both in code and localisation
   - [x] 'Old Nixie Tube' to either 'Classic Nixie Tube'
   - [x] 'Nixie Tube' to 'Reinforced Nixie Tube'

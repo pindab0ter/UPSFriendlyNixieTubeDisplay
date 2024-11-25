@@ -341,6 +341,8 @@ filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 
 --- @param _ EventData.on_tick
 local function on_tick(_)
+    local first_controller_this_tick = storage.next_controller
+
     for _ = 1, storage.controller_updates_per_tick do
         local controller
 
@@ -350,6 +352,11 @@ local function on_tick(_)
         end
 
         storage.next_controller, controller = next(storage.controllers, storage.next_controller)
+
+        -- If we've looped back to the first controller which was processed this tick, stop
+        if storage.next_controller ~= nil and storage.next_controller == first_controller_this_tick then
+            break
+        end
 
         if controller ~= nil then
             update_controller(controller)

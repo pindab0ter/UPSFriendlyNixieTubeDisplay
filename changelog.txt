@@ -1,7 +1,22 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.2
+Date: 2024-11-26
+  Features:
+    - Added descriptions to items and entities
+    - Improved localization
+  Optimizations:
+    - Prevented updating Nixie Tubes on surfaces nobody is looking at
+  Translation:
+    - Polish translation (credit to skill3472)
+    - Dutch translation (credit to pindab0ter)
+  Bugfixes:
+    - Fixed Nixie Tubes updating multiple times in one tick
+    - Fixed not always using the full updates per tick budget
+    - Fixed counting skipped updates towards updates per tick usage
+---------------------------------------------------------------------------------------------------
 Version: 0.2.1
 Date: 2024-11-24
-  Fixed:
+  Bugfixes:
     - Small Reinforced Nixie Tube recipe now requires the correct items
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.0
@@ -12,6 +27,9 @@ Date: 2024-11-24
     - Added a simple GUI for setting the circuit network signal
     - Improved wire connection visuals
     - Made it even more FPS friendly
+  Changes:
+    - Removed the "Update delay" setting, as this could lead to stuttering
+  Scripting:
     - Cleaned up the code to make it readable
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.19

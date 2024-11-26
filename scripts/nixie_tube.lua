@@ -341,6 +341,11 @@ filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 
 --- @param _ EventData.on_tick
 local function on_tick(_)
+    -- There are no controllers to update
+    if next(storage.controllers) == nil then
+        return
+    end
+
     local first_unit_number_this_tick = storage.next_controller_unit_number
 
     -- Determine which surfaces have players that can see the Nixie Tubes

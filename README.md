@@ -45,3 +45,5 @@ This project is licensed under the MIT License.
 
 - Dutch
   - [pindab0ter](https://github.com/pindab0ter)
+- Polish
+  - [skill3472](https://github.com/skill3472)

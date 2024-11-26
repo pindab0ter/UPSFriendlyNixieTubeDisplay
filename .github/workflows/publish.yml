@@ -1,0 +1,29 @@
+name: Publish Factorio Mod
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate mod
+        uses: TheBrutalX/factorio-mod-uploader-action@v1
+        with:
+          action: validate
+
+      - name: Create zip file
+        uses: TheBrutalX/factorio-mod-uploader-action@v1
+        with:
+          action: compress
+
+      - name: Upload mod
+        uses: TheBrutalX/factorio-mod-uploader-action@v1
+        with:
+          action: upload
+          factorio-api-key: ${{ secrets.FACTORIO_API_KEY }}

@@ -113,19 +113,19 @@ local function display_characters(display, characters)
         return
     end
 
-    local sprite_count = digit_counts[display.entity.name]
+    local digit_count = digit_counts[display.entity.name]
 
     if characters == "off" then
         -- Set this display to 'off'
-        set_arithmetic_combinators(display, (sprite_count == 1) and { "off" } or { "off", "off" })
-    elseif #characters < sprite_count then
+        set_arithmetic_combinators(display, (digit_count == 1) and { "off" } or { "off", "off" })
+    elseif #characters < digit_count then
         -- Display the last digit
         set_arithmetic_combinators(display, { "off", characters:sub(-1) })
-    elseif #characters >= sprite_count then
+    elseif #characters >= digit_count then
         -- Display the rightmost `sprite_count` digits
         set_arithmetic_combinators(
             display,
-            (sprite_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
+            (digit_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
         )
     end
 
@@ -138,10 +138,10 @@ local function display_characters(display, characters)
         end
 
         local remaining_value
-        if #characters <= sprite_count or characters == "off" then
+        if #characters <= digit_count or characters == "off" then
             remaining_value = "off"
         else
-            remaining_value = characters:sub(1, -(sprite_count + 1))
+            remaining_value = characters:sub(1, -(digit_count + 1))
         end
 
         if next_display.remaining_value == remaining_value then
@@ -436,19 +436,20 @@ local function on_script_trigger_effect(event)
         return
     end
 
-    local entity = event.cause_entity
-
-    if not entity then
+    local nixie_tube = event.cause_entity
+    if not nixie_tube then
         return
     end
 
-    local control_behavior = entity.get_or_create_control_behavior() --[[@as LuaLampControlBehavior?]]
+    -- Set up the Nixie Tube and its display
+    nixie_tube.always_on = true
 
+    local control_behavior = nixie_tube.get_or_create_control_behavior() --[[@as LuaLampControlBehavior?]]
     if control_behavior then
         control_behavior.circuit_enable_disable = true
     end
 
-    configure_nixie_tube(entity)
+    configure_nixie_tube(nixie_tube)
 end
 
 --- @param event EventData.on_runtime_mod_setting_changed

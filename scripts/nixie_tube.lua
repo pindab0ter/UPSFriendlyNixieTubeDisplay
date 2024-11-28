@@ -212,15 +212,24 @@ local function update_controller(controller)
     display_characters(display, ("%i"):format(signal_value))
 end
 
---- Invalidate the remaining characters cache for this and all adjacent Nixie tubes to the
---- east, causing the value to be redrawn
+--- Invalidate the remaining characters cache, causing the value(s) to be redrawn
 --- @param display NixieTubeDisplay
-local function invalidate_cache(display)
+--- @param direction "east"|"west"
+local function invalidate_cache(display, direction)
+    if storage.invalidated_this_tick[display.entity.unit_number] then
+        return
+    end
+
+    display.remaining_value = nil
     storage.invalidated_this_tick[display.entity.unit_number] = true
 
-    for _, other_display in pairs(storage.displays) do
-        if not storage.invalidated_this_tick[other_display.next_display] and other_display.next_display == display.entity.unit_number then
-            invalidate_cache(other_display)
+    if direction == "west" and display.next_display then
+        invalidate_cache(storage.displays[display.next_display], direction)
+    elseif direction == "east" then
+        for _, other_display in pairs(storage.displays) do
+            if other_display.next_display == display.entity.unit_number then
+                invalidate_cache(other_display, direction)
+            end
         end
     end
 end
@@ -258,11 +267,13 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
             end
 
             storage.controllers[neighbor.unit_number] = nil
-            helpers.storage_set_display(nixie_tube, {
+            local neighbor_display = helpers.storage_set_display(nixie_tube, {
                 next_display = neighbor.unit_number
             })
 
-            -- display_characters(neighbor_display, "off")
+            if invalidate_caches ~= false then
+                invalidate_cache(neighbor_display, "west")
+            end
         end
     end
 
@@ -280,9 +291,8 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
                 next_display = nixie_tube.unit_number,
             })
 
-            -- Otherwise the display will not render until the value of the display to the east changes
-            if invalidate_caches then
-                invalidate_cache(neighbor_display)
+            if invalidate_caches ~= false then
+                invalidate_cache(neighbor_display, "east")
             end
         end
     end

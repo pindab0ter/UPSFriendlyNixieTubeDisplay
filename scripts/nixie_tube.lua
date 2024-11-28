@@ -4,12 +4,14 @@ local helpers = require("scripts.helpers")
 --- @class NixieTubeController The aspect of a Nixie Tube responsible for controlling a series of Nixie Tubes. Always
 ---   the most eastern Nixie Tube (least significant digit) in a series of Nixie Tubes
 --- @field entity LuaEntity
+--- @field control_behavior LuaLampControlBehavior?
 --- @field previous_signal SignalID?
 --- @field previous_value int?
 
 --- @class NixieTubeDisplay The aspect of a Nixie Tube responsible for displaying one or two digits
 --- @field entity LuaEntity
 --- @field arithmetic_combinators table<uint, LuaEntity>
+--- @field control_behaviors table<uint, LuaAccumulatorControlBehavior>
 --- @field next_display uint?
 --- @field remaining_value string?
 
@@ -99,7 +101,12 @@ local function set_arithmetic_combinators(display, values)
             display.arithmetic_combinators[key] = arithmetic_combinator
         end
 
-        local control_behavior = arithmetic_combinator.get_or_create_control_behavior() --[[@as LuaArithmeticCombinatorControlBehavior]]
+        local control_behavior = display.control_behaviors[key]
+        if not (control_behavior and control_behavior.valid) then
+            control_behavior = arithmetic_combinator.get_or_create_control_behavior() or
+                error('Failed to get control behavior') --[[@as LuaAccumulatorControlBehavior]]
+            display.control_behaviors[key] = control_behavior
+        end
         local parameters = control_behavior.parameters
         parameters.operation = state_display[value]
         control_behavior.parameters = parameters
@@ -168,11 +175,19 @@ local function update_controller(controller)
         return
     end
 
-    local selected_signal = helpers.get_selected_signal(controller.entity)
+    local control_behavior = controller.control_behavior
+    if not control_behavior then
+        control_behavior = controller.entity.get_or_create_control_behavior() or
+            error('Failed to get control behavior') --[[@as LuaLampControlBehavior]]
+    end
+
+    local selected_signal = control_behavior
+        .circuit_condition --[[@as CircuitCondition]]
+        .first_signal
 
     if controller.previous_signal ~= selected_signal then
-        controller.previous_value = nil
         controller.previous_signal = selected_signal
+        controller.previous_value = nil
     end
 
     local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
@@ -487,9 +502,12 @@ end)
 
 nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
     local nixie_tube = self.entity
-    local signal = event.element.elem_value
-    local behavior = nixie_tube.get_or_create_control_behavior()
+    local signal = event.element.elem_value --[[@as SignalID]]
+    local behavior = nixie_tube.get_or_create_control_behavior() or
+        error('Failed to get control behavior') --[[@as LuaLampControlBehavior]]
 
+    -- See https://lua-api.factorio.com/stable/concepts/CircuitConditionDefinition.html
+    ---@diagnostic disable-next-line: missing-fields
     behavior.circuit_condition = {
         comparator = "=",
         first_signal = signal,

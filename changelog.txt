@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.3
+Date: 2024-11-24
+  Bugfixes:
+    - Fixed numbers not being removed when removing a Nixie Tube
+  Optimizations:
+    - Improved performance when rendering Nixie Tubes
+    - Improved performance when placing and removing Nixie Tubes
+    - Improved performance when loading the mod after a configuration change
+---------------------------------------------------------------------------------------------------
 Version: 0.2.2
 Date: 2024-11-26
   Features:

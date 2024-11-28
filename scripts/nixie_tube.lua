@@ -4,12 +4,14 @@ local helpers = require("scripts.helpers")
 --- @class NixieTubeController The aspect of a Nixie Tube responsible for controlling a series of Nixie Tubes. Always
 ---   the most eastern Nixie Tube (least significant digit) in a series of Nixie Tubes
 --- @field entity LuaEntity
+--- @field control_behavior LuaLampControlBehavior?
 --- @field previous_signal SignalID?
 --- @field previous_value int?
 
 --- @class NixieTubeDisplay The aspect of a Nixie Tube responsible for displaying one or two digits
 --- @field entity LuaEntity
 --- @field arithmetic_combinators table<uint, LuaEntity>
+--- @field control_behaviors table<uint, LuaAccumulatorControlBehavior>
 --- @field next_display uint?
 --- @field remaining_value string?
 
@@ -31,6 +33,9 @@ storage = {
     --- @type number
     controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value) or
         error("nixie-tube-group-updates-per-tick not set"),
+
+    --- @type table<uint, boolean>
+    invalidated_this_tick = {}
 }
 
 local digit_counts = {
@@ -96,7 +101,12 @@ local function set_arithmetic_combinators(display, values)
             display.arithmetic_combinators[key] = arithmetic_combinator
         end
 
-        local control_behavior = arithmetic_combinator.get_or_create_control_behavior() --[[@as LuaArithmeticCombinatorControlBehavior]]
+        local control_behavior = display.control_behaviors[key]
+        if not (control_behavior and control_behavior.valid) then
+            control_behavior = arithmetic_combinator.get_or_create_control_behavior() or
+                error('Failed to get control behavior') --[[@as LuaAccumulatorControlBehavior]]
+            display.control_behaviors[key] = control_behavior
+        end
         local parameters = control_behavior.parameters
         parameters.operation = state_display[value]
         control_behavior.parameters = parameters
@@ -113,19 +123,19 @@ local function display_characters(display, characters)
         return
     end
 
-    local sprite_count = digit_counts[display.entity.name]
+    local digit_count = digit_counts[display.entity.name]
 
     if characters == "off" then
         -- Set this display to 'off'
-        set_arithmetic_combinators(display, (sprite_count == 1) and { "off" } or { "off", "off" })
-    elseif #characters < sprite_count then
+        set_arithmetic_combinators(display, (digit_count == 1) and { "off" } or { "off", "off" })
+    elseif #characters < digit_count then
         -- Display the last digit
         set_arithmetic_combinators(display, { "off", characters:sub(-1) })
-    elseif #characters >= sprite_count then
+    elseif #characters >= digit_count then
         -- Display the rightmost `sprite_count` digits
         set_arithmetic_combinators(
             display,
-            (sprite_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
+            (digit_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
         )
     end
 
@@ -138,10 +148,10 @@ local function display_characters(display, characters)
         end
 
         local remaining_value
-        if #characters <= sprite_count or characters == "off" then
+        if #characters <= digit_count or characters == "off" then
             remaining_value = "off"
         else
-            remaining_value = characters:sub(1, -(sprite_count + 1))
+            remaining_value = characters:sub(1, -(digit_count + 1))
         end
 
         if next_display.remaining_value == remaining_value then
@@ -165,11 +175,19 @@ local function update_controller(controller)
         return
     end
 
-    local selected_signal = helpers.get_selected_signal(controller.entity)
+    local control_behavior = controller.control_behavior
+    if not control_behavior then
+        control_behavior = controller.entity.get_or_create_control_behavior() or
+            error('Failed to get control behavior') --[[@as LuaLampControlBehavior]]
+    end
+
+    local selected_signal = control_behavior
+        .circuit_condition --[[@as CircuitCondition]]
+        .first_signal
 
     if controller.previous_signal ~= selected_signal then
-        controller.previous_value = nil
         controller.previous_signal = selected_signal
+        controller.previous_value = nil
     end
 
     local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
@@ -198,21 +216,18 @@ end
 --- east, causing the value to be redrawn
 --- @param display NixieTubeDisplay
 local function invalidate_cache(display)
-    if not display then
-        return
-    end
-
-    display.remaining_value = nil
+    storage.invalidated_this_tick[display.entity.unit_number] = true
 
     for _, other_display in pairs(storage.displays) do
-        if other_display.next_display == display.entity.unit_number then
+        if not storage.invalidated_this_tick[other_display.next_display] and other_display.next_display == display.entity.unit_number then
             invalidate_cache(other_display)
         end
     end
 end
 
 --- @param nixie_tube LuaEntity
-local function configure_nixie_tube(nixie_tube)
+--- @param invalidate_caches boolean?
+local function configure_nixie_tube(nixie_tube, invalidate_caches)
     -- Set up the Nixie Tube and its display
     nixie_tube.always_on = true
 
@@ -233,8 +248,8 @@ local function configure_nixie_tube(nixie_tube)
     for _, neighbor in pairs(western_neighbors) do
         if neighbor.valid then
             if storage.next_controller_unit_number == neighbor.unit_number then
-                -- If it's currently the next controller, claim that
-                storage.next_controller_unit_number = nixie_tube.unit_number
+                -- If it's currently the next controller, clear it
+                storage.next_controller_unit_number = nil
             end
 
             local neighbor_control_behavior = neighbor.get_control_behavior() --[[@as LuaLampControlBehavior?]]
@@ -243,11 +258,11 @@ local function configure_nixie_tube(nixie_tube)
             end
 
             storage.controllers[neighbor.unit_number] = nil
-            local neighbor_display = helpers.storage_set_display(nixie_tube, {
+            helpers.storage_set_display(nixie_tube, {
                 next_display = neighbor.unit_number
             })
 
-            display_characters(neighbor_display, "off")
+            -- display_characters(neighbor_display, "off")
         end
     end
 
@@ -266,15 +281,15 @@ local function configure_nixie_tube(nixie_tube)
             })
 
             -- Otherwise the display will not render until the value of the display to the east changes
-            invalidate_cache(neighbor_display)
+            if invalidate_caches then
+                invalidate_cache(neighbor_display)
+            end
         end
     end
 
     -- If there is no eastern neighbor, set this as a controller
     if not has_eastern_neighbor then
-        local controller = helpers.storage_set_controller(nixie_tube)
-
-        update_controller(controller)
+        helpers.storage_set_controller(nixie_tube)
     end
 end
 
@@ -284,6 +299,7 @@ local function reconfigure_nixie_tubes()
     storage.next_controller_unit_number = nil
     storage.displays = {}
     storage.gui = {}
+    storage.invalidated_this_tick = {}
 
     for _, surface in pairs(game.surfaces) do
         local arithmetic_combinators = surface.find_entities_filtered {
@@ -309,7 +325,7 @@ local function reconfigure_nixie_tubes()
         }
 
         for _, entity in pairs(nixie_tubes) do
-            configure_nixie_tube(entity);
+            configure_nixie_tube(entity, false);
         end
     end
 end
@@ -341,6 +357,8 @@ filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 
 --- @param _ EventData.on_tick
 local function on_tick(_)
+    storage.invalidated_this_tick = {}
+
     -- There are no controllers to update
     if next(storage.controllers) == nil then
         return
@@ -436,19 +454,20 @@ local function on_script_trigger_effect(event)
         return
     end
 
-    local entity = event.cause_entity
-
-    if not entity then
+    local nixie_tube = event.cause_entity
+    if not nixie_tube then
         return
     end
 
-    local control_behavior = entity.get_or_create_control_behavior() --[[@as LuaLampControlBehavior?]]
+    -- Set up the Nixie Tube and its display
+    nixie_tube.always_on = true
 
+    local control_behavior = nixie_tube.get_or_create_control_behavior() --[[@as LuaLampControlBehavior?]]
     if control_behavior then
         control_behavior.circuit_enable_disable = true
     end
 
-    configure_nixie_tube(entity)
+    configure_nixie_tube(nixie_tube)
 end
 
 --- @param event EventData.on_runtime_mod_setting_changed
@@ -483,9 +502,12 @@ end)
 
 nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
     local nixie_tube = self.entity
-    local signal = event.element.elem_value
-    local behavior = nixie_tube.get_or_create_control_behavior()
+    local signal = event.element.elem_value --[[@as SignalID]]
+    local behavior = nixie_tube.get_or_create_control_behavior() or
+        error('Failed to get control behavior') --[[@as LuaLampControlBehavior]]
 
+    -- See https://lua-api.factorio.com/stable/concepts/CircuitConditionDefinition.html
+    ---@diagnostic disable-next-line: missing-fields
     behavior.circuit_condition = {
         comparator = "=",
         first_signal = signal,

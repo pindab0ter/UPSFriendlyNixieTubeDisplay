@@ -233,8 +233,8 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
     for _, neighbor in pairs(western_neighbors) do
         if neighbor.valid then
             if storage.next_controller_unit_number == neighbor.unit_number then
-                -- If it's currently the next controller, claim that
-                storage.next_controller_unit_number = nixie_tube.unit_number
+                -- If it's currently the next controller, clear it
+                storage.next_controller_unit_number = nil
             end
 
             local neighbor_control_behavior = neighbor.get_control_behavior() --[[@as LuaLampControlBehavior?]]

@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.4
+Date: 2024-11-24
+  Bugfixes:
+    - Fixed a crash when there were no observable Nixie Tubes, e.g. when all connected players are in map view.
+---------------------------------------------------------------------------------------------------
 Version: 0.2.3
 Date: 2024-11-24
   Bugfixes:

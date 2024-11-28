@@ -395,8 +395,9 @@ local function on_tick(_)
         -- If no player is able to see Nixie Tubes on this surface, skip the update
         if eyes_on_surface[controller.entity.surface_index] then
             update_controller(controller)
-            i = i + 1
         end
+
+        i = i + 1
     end
 end
 

@@ -31,6 +31,9 @@ storage = {
     --- @type number
     controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value) or
         error("nixie-tube-group-updates-per-tick not set"),
+
+    --- @type table<uint, boolean>
+    invalidated_this_tick = {}
 }
 
 local digit_counts = {
@@ -198,21 +201,18 @@ end
 --- east, causing the value to be redrawn
 --- @param display NixieTubeDisplay
 local function invalidate_cache(display)
-    if not display then
-        return
-    end
-
-    display.remaining_value = nil
+    storage.invalidated_this_tick[display.entity.unit_number] = true
 
     for _, other_display in pairs(storage.displays) do
-        if other_display.next_display == display.entity.unit_number then
+        if not storage.invalidated_this_tick[other_display.next_display] and other_display.next_display == display.entity.unit_number then
             invalidate_cache(other_display)
         end
     end
 end
 
 --- @param nixie_tube LuaEntity
-local function configure_nixie_tube(nixie_tube)
+--- @param invalidate_caches boolean?
+local function configure_nixie_tube(nixie_tube, invalidate_caches)
     -- Set up the Nixie Tube and its display
     nixie_tube.always_on = true
 
@@ -243,11 +243,11 @@ local function configure_nixie_tube(nixie_tube)
             end
 
             storage.controllers[neighbor.unit_number] = nil
-            local neighbor_display = helpers.storage_set_display(nixie_tube, {
+            helpers.storage_set_display(nixie_tube, {
                 next_display = neighbor.unit_number
             })
 
-            display_characters(neighbor_display, "off")
+            -- display_characters(neighbor_display, "off")
         end
     end
 
@@ -266,15 +266,15 @@ local function configure_nixie_tube(nixie_tube)
             })
 
             -- Otherwise the display will not render until the value of the display to the east changes
-            invalidate_cache(neighbor_display)
+            if invalidate_caches then
+                invalidate_cache(neighbor_display)
+            end
         end
     end
 
     -- If there is no eastern neighbor, set this as a controller
     if not has_eastern_neighbor then
-        local controller = helpers.storage_set_controller(nixie_tube)
-
-        update_controller(controller)
+        helpers.storage_set_controller(nixie_tube)
     end
 end
 
@@ -284,6 +284,7 @@ local function reconfigure_nixie_tubes()
     storage.next_controller_unit_number = nil
     storage.displays = {}
     storage.gui = {}
+    storage.invalidated_this_tick = {}
 
     for _, surface in pairs(game.surfaces) do
         local arithmetic_combinators = surface.find_entities_filtered {
@@ -309,7 +310,7 @@ local function reconfigure_nixie_tubes()
         }
 
         for _, entity in pairs(nixie_tubes) do
-            configure_nixie_tube(entity);
+            configure_nixie_tube(entity, false);
         end
     end
 end
@@ -341,6 +342,8 @@ filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 
 --- @param _ EventData.on_tick
 local function on_tick(_)
+    storage.invalidated_this_tick = {}
+
     -- There are no controllers to update
     if next(storage.controllers) == nil then
         return

@@ -58,9 +58,11 @@ local state_display = {
     ["9"] = "XOR",
 }
 
-----------------------
--- Nixie Tube logic --
-----------------------
+
+------------------------
+-- Nixie Tube updates --
+------------------------
+
 
 --- Set the digit(s) and update the sprite for a nixie tube
 --- @param display NixieTubeDisplay
@@ -190,7 +192,7 @@ local function update_controller(controller)
         controller.previous_value = nil
     end
 
-    local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
+    local has_enough_energy = display.entity.energy > 0
 
     if not selected_signal or not has_enough_energy then
         display_characters(display, "off")
@@ -211,6 +213,12 @@ local function update_controller(controller)
 
     display_characters(display, ("%i"):format(signal_value))
 end
+
+
+------------------------------
+-- Nixie Tube configuration --
+------------------------------
+
 
 --- Invalidate the remaining characters cache, causing the value(s) to be redrawn
 --- @param display NixieTubeDisplay
@@ -340,9 +348,11 @@ local function reconfigure_nixie_tubes()
     end
 end
 
+
 --------------
 -- Commands --
 --------------
+
 
 commands.add_command(
     "reconfigure-nixie-tubes",
@@ -353,17 +363,21 @@ commands.add_command(
     end
 )
 
+
 -------------
 -- Filters --
 -------------
+
 
 local filters = {}
 filters[#filters + 1] = { filter = "name", name = "nixie_tube" }
 filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 
+
 --------------------
 -- Event handlers --
 --------------------
+
 
 --- @param _ EventData.on_tick
 local function on_tick(_)

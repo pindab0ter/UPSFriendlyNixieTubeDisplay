@@ -1,11 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.6
+Date: 2024-11-29
+  Bugfixes:
+    - Fixed displays not rendering when there is only a little bit of power available
+---------------------------------------------------------------------------------------------------
 Version: 0.2.5
-Date: 2024-11-24
+Date: 2024-11-28
   Bugfixes:
     - Fixed Nixie Tubes not updating correctly when placed to the left or in the middle of a row
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.4
-Date: 2024-11-24
+Date: 2024-11-28
   Bugfixes:
     - Fixed a crash when there were no observable Nixie Tubes, e.g. when all connected players are in map view
 ---------------------------------------------------------------------------------------------------

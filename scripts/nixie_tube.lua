@@ -192,7 +192,7 @@ local function update_controller(controller)
         controller.previous_value = nil
     end
 
-    local has_enough_energy = display.entity.energy >= 50 or script.level.is_simulation
+    local has_enough_energy = display.entity.energy > 0
 
     if not selected_signal or not has_enough_energy then
         display_characters(display, "off")

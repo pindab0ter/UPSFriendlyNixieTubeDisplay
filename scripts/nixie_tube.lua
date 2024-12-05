@@ -559,6 +559,7 @@ local nixie_tube = {
         [defines.events.on_entity_died] = on_object_destroyed,
         [defines.events.on_player_mined_entity] = on_object_destroyed,
         [defines.events.on_robot_mined_entity] = on_object_destroyed,
+        [defines.events.on_space_platform_mined_entity] = on_object_destroyed,
         [defines.events.script_raised_destroy] = on_object_destroyed,
     }
 }

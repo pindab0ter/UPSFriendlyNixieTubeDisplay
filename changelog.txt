@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.7
+Date: 2024-12-05
+  Bugfixes:
+    - Fix crash when removing a Nixie Tube from a space platform
+    - Fix crash when deleting a surface with Nixie Tubes on it
+---------------------------------------------------------------------------------------------------
 Version: 0.2.6
 Date: 2024-11-29
   Bugfixes:

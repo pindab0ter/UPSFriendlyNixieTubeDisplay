@@ -416,7 +416,12 @@ local function on_tick(_)
             storage.next_controller_unit_number, controller = next(storage.controllers)
         end
 
-        -- If no player is able to see Nixie Tubes on this surface, skip the update
+        if not controller.entity.valid then
+            reconfigure_nixie_tubes()
+            break
+        end
+
+        -- If no player is abl see Nixie Tubes on this surface, skip the update
         if eyes_on_surface[controller.entity.surface_index] then
             update_controller(controller)
         end
@@ -554,6 +559,7 @@ local nixie_tube = {
         [defines.events.on_entity_died] = on_object_destroyed,
         [defines.events.on_player_mined_entity] = on_object_destroyed,
         [defines.events.on_robot_mined_entity] = on_object_destroyed,
+        [defines.events.on_space_platform_mined_entity] = on_object_destroyed,
         [defines.events.script_raised_destroy] = on_object_destroyed,
     }
 }

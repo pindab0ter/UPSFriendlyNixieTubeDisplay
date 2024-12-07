@@ -51,7 +51,7 @@ data:extend {
         icon = "__UPSFriendlyNixieTubeDisplay__/graphics/reinforced-nixie-tube-icon.png",
         icon_size = 32,
         subgroup = "circuit-network",
-        order = "c-a-b",
+        order = "a[lamp]-b[nixie-tube]-b[reinforced]",
         place_result = "reinforced-nixie-tube",
         stack_size = 50
     },

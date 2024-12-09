@@ -47,3 +47,5 @@ This project is licensed under the MIT License.
   - [pindab0ter](https://github.com/pindab0ter)
 - Polish
   - [skill3472](https://github.com/skill3472)
+- Russian
+  - [dodther](https://github.com/dodther)

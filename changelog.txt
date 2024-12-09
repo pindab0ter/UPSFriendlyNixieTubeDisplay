@@ -1,9 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.2.8
+Date: 2024-12-09
+  Translation:
+    - Added Russian translation (credit to dodther)
+---------------------------------------------------------------------------------------------------
 Version: 0.2.7
 Date: 2024-12-05
   Bugfixes:
-    - Fix crash when removing a Nixie Tube from a space platform
-    - Fix crash when deleting a surface with Nixie Tubes on it
+    - Fixed crash when removing a Nixie Tube from a space platform
+    - Fixed crash when deleting a surface with Nixie Tubes on it
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.6
 Date: 2024-11-29
@@ -37,8 +42,8 @@ Date: 2024-11-26
   Optimizations:
     - Prevented updating Nixie Tubes on surfaces nobody is looking at
   Translation:
-    - Polish translation (credit to skill3472)
-    - Dutch translation (credit to pindab0ter)
+    - Added Polish translation (credit to skill3472)
+    - Added Dutch translation (credit to pindab0ter)
   Bugfixes:
     - Fixed Nixie Tubes updating multiple times in one tick
     - Fixed not always using the full updates per tick budget

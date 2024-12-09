@@ -51,7 +51,7 @@ data:extend {
         icon = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-icon.png",
         icon_size = 32,
         subgroup = "circuit-network",
-        order = "c-a-a",
+        order = "a[lamp]-b[nixie-tube]-a[classic]",
         place_result = "classic-nixie-tube",
         stack_size = 50
     },

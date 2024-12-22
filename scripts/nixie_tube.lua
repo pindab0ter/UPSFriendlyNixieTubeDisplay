@@ -41,7 +41,8 @@ storage = {
 local digit_counts = {
     ['classic-nixie-tube'] = 1,
     ['reinforced-nixie-tube'] = 1,
-    ['small-reinforced-nixie-tube'] = 2
+    ['small-reinforced-nixie-tube'] = 2,
+    ['million-reinforced-nixie-tube'] = 7
 }
 
 local state_display = {
@@ -90,6 +91,26 @@ local function set_arithmetic_combinators(display, values)
                 end
             end
 
+            -- 7-digit Nixie Tube Display (positions by trial-and-error)
+            if #values == 7 then
+                position.y = position.y + 0.01 -- hack because digits 1 - 3 are drawn behind base???
+                if key == 1 then
+                    position.x = position.x - 29 / 32
+                elseif key == 2 then
+                    position.x = position.x - 16.2 / 32
+                elseif key == 3 then
+                    position.x = position.x - 5 / 32
+                elseif key == 4 then
+                    position.x = position.x + 6 / 32
+                elseif key == 5 then
+                    position.x = position.x + 19 / 32
+                elseif key == 6 then
+                    position.x = position.x + 30 / 32
+                elseif key == 7 then
+                    position.x = position.x + 41 / 32
+                end
+            end
+
             arithmetic_combinator = display.entity.surface.create_entity {
                 name = display.entity.name .. "-sprite",
                 position = position,
@@ -128,20 +149,32 @@ local function display_characters(display, characters)
     local digit_count = digit_counts[display.entity.name]
 
     if characters == "off" then
-        -- Set this display to 'off'
-        set_arithmetic_combinators(display, (digit_count == 1) and { "off" } or { "off", "off" })
-    elseif #characters < digit_count then
-        -- Display the last digit
-        set_arithmetic_combinators(display, { "off", characters:sub(-1) })
-    elseif #characters >= digit_count then
-        -- Display the rightmost `sprite_count` digits
-        set_arithmetic_combinators(
-            display,
-            (digit_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
-        )
+        -- Turn off all digits of the display
+        local off_digits = {}
+        for i = 1, digit_count do
+            table.insert(off_digits, "off")
+        end
+        set_arithmetic_combinators(display, off_digits)
+    elseif #characters <= digit_count then
+        -- Display characters, left-padded with "off" if fewer than 7 digits
+        local padded_digits = {}
+        for i = 1, digit_count - #characters do
+            table.insert(padded_digits, "off")
+        end
+        for i = 1, #characters do
+            table.insert(padded_digits, characters:sub(i, i))
+        end
+        set_arithmetic_combinators(display, padded_digits)
+    else
+        -- Display the last `digit_count` characters
+        local display_digits = {}
+        for i = #characters - digit_count + 1, #characters do
+            table.insert(display_digits, characters:sub(i, i))
+        end
+        set_arithmetic_combinators(display, display_digits)
     end
 
-    -- Draw remainder on the next display
+    -- Handle the overflow characters for the next display
     if display.next_display then
         local next_display = storage.displays[display.next_display]
 
@@ -149,20 +182,20 @@ local function display_characters(display, characters)
             return
         end
 
-        local remaining_value
+        local remaining_characters
         if #characters <= digit_count or characters == "off" then
-            remaining_value = "off"
+            remaining_characters = "off"
         else
-            remaining_value = characters:sub(1, -(digit_count + 1))
+            remaining_characters = characters:sub(1, #characters - digit_count)
         end
 
-        if next_display.remaining_value == remaining_value then
+        if next_display.remaining_value == remaining_characters then
             return
         else
-            next_display.remaining_value = remaining_value
+            next_display.remaining_value = remaining_characters
         end
 
-        display_characters(next_display, remaining_value)
+        display_characters(next_display, remaining_characters)
     end
 end
 
@@ -255,10 +288,16 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
     end
 
     helpers.storage_set_display(nixie_tube)
+    
+    local offset_tiles = 1
+    
+    if digit_count == 7 then
+        offset_tiles = 2
+    end
 
     -- Process the Nixie Tube to the west, if there is one
     local western_neighbors = nixie_tube.surface.find_entities_filtered {
-        position = { x = nixie_tube.position.x - 1, y = nixie_tube.position.y },
+        position = { x = nixie_tube.position.x - offset_tiles, y = nixie_tube.position.y },
         name = nixie_tube.name,
     }
 
@@ -287,7 +326,7 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
 
     -- Process the Nixie Tube to the east.
     eastern_neighbors = nixie_tube.surface.find_entities_filtered {
-        position = { x = nixie_tube.position.x + 1, y = nixie_tube.position.y },
+        position = { x = nixie_tube.position.x + offset_tiles, y = nixie_tube.position.y },
         name = nixie_tube.name,
     }
 
@@ -324,7 +363,8 @@ local function reconfigure_nixie_tubes()
             name = {
                 "classic-nixie-tube-sprite",
                 "reinforced-nixie-tube-sprite",
-                "small-reinforced-nixie-tube-sprite"
+                "small-reinforced-nixie-tube-sprite",
+                "million-reinforced-nixie-tube-sprite"
             },
         }
 
@@ -338,7 +378,8 @@ local function reconfigure_nixie_tubes()
             name = {
                 "classic-nixie-tube",
                 "reinforced-nixie-tube",
-                "small-reinforced-nixie-tube"
+                "small-reinforced-nixie-tube",
+                "million-reinforced-nixie-tube"
             }
         }
 

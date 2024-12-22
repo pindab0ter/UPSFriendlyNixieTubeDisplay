@@ -3,7 +3,8 @@ local helpers = {}
 local entity_names = {
     'classic-nixie-tube',
     'reinforced-nixie-tube',
-    'small-reinforced-nixie-tube'
+    'small-reinforced-nixie-tube',
+    'million-reinforced-nixie-tube'
 }
 
 ---Determine if a table with contiguous keys has the given value.

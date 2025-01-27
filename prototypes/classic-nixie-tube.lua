@@ -13,7 +13,7 @@ circuit_connector_definitions["classic-nixie-tube"] = circuit_connector_definiti
 
 local function build_sprite(character)
     local orientation = {
-        filename = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-numbers.png",
+        filename = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/classic-nixie-tube-numbers.png",
         width = 27,
         height = 45,
         scale = 1,
@@ -48,7 +48,7 @@ data:extend {
     {
         type = "item",
         name = "classic-nixie-tube",
-        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-icon.png",
+        icon = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/classic-nixie-tube-icon.png",
         icon_size = 32,
         subgroup = "circuit-network",
         order = "a[lamp]-b[nixie-tube]-a[classic]",
@@ -59,7 +59,7 @@ data:extend {
         type = "lamp",
         name = "classic-nixie-tube",
         order = "z[zebra]",
-        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-icon.png",
+        icon = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/classic-nixie-tube-icon.png",
         icon_size = 32,
         collision_box = {
             { x = -0.35, y = -0.35 },
@@ -84,13 +84,13 @@ data:extend {
         },
         corpse = "small-remnants",
         picture_on = {
-            filename = "__UPSFriendlyNixieTubeDisplay__/graphics/empty.png",
+            filename = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/empty.png",
             priority = "low",
             width = 1,
             height = 1,
         },
         picture_off = {
-            filename = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-base.png",
+            filename = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/classic-nixie-tube-base.png",
             priority = "high",
             width = 64,
             height = 55,
@@ -137,7 +137,7 @@ data:extend {
     {
         type                           = "arithmetic-combinator",
         name                           = "classic-nixie-tube-sprite",
-        icon                           = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-icon.png",
+        icon                           = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/classic-nixie-tube-icon.png",
         icon_size                      = 32,
         flags                          = {
             "placeable-off-grid",

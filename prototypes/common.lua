@@ -33,7 +33,7 @@ common.empty_offsets = {
 
 ---@type data.Sprite
 common.empty_sprite = {
-    filename = "__UPSFriendlyNixieTubeDisplay__/graphics/empty.png",
+    filename = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/empty.png",
     width = 1,
     height = 1,
     frame_count = 1,

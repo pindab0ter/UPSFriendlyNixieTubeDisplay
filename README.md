@@ -1,6 +1,6 @@
 This is a fork of Santa's Nixie Tubes [mod](https://mods.factorio.com/mod/SantasNixieTubeDisplay) that has better performance and other improvements.
 
-Download the mod from the [Factorio Mods Portal](https://mods.factorio.com/mod/UPSFriendlyNixieTubeDisplay)
+Download the mod from the [Factorio Mods Portal](https://mods.factorio.com/mod/UPSFriendlyNixieTubeDisplayFixed)
 
 ## Features
 

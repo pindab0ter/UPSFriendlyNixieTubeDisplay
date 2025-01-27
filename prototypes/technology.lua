@@ -4,7 +4,7 @@ data:extend({
     {
         type = "technology",
         name = "classic-nixie-tubes",
-        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-technology-icon.png",
+        icon = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/classic-nixie-tube-technology-icon.png",
         icon_size = 32,
         unit = {
             count = 2 * util.table.deepcopy(data.raw["technology"]["circuit-network"].unit.count),
@@ -25,7 +25,7 @@ data:extend({
     {
         type = "technology",
         name = "reinforced-nixie-tubes",
-        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/reinforced-nixie-tube-technology-icon.png",
+        icon = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/reinforced-nixie-tube-technology-icon.png",
         icon_size = 32,
         unit = {
             count = 3 * util.table.deepcopy(data.raw["technology"]["circuit-network"].unit.count),

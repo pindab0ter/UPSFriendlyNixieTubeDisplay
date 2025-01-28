@@ -1,12 +1,12 @@
 {
-  "name": "UPSFriendlyNixieTubeDisplayFixed",
+  "name": "UPSFriendlyNixieTubeDisplay",
   "version": "0.2.9",
   "factorio_version": "2.0",
-  "title": "UPS Friendly Nixie Tubes (Fixed)",
-  "author": "nmkd, Red_Wizard, pindab0ter",
+  "title": "UPS Friendly Nixie Tubes",
+  "author": "Red_Wizard, pindab0ter",
   "contact": "",
   "homepage": "https://github.com/pindab0ter/UPSFriendlyNixieTubeDisplay",
-  "description": "A UPS friendly Nixie Tube mod. Fixed by nmkd to work properly with remote view.",
+  "description": "A UPS friendly Nixie Tube mod.",
   "dependencies": [
     "base >= 2.0.0",
     "flib >= 0.15.0",

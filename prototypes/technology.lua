@@ -43,6 +43,10 @@ data:extend({
             {
                 type = "unlock-recipe",
                 recipe = "small-reinforced-nixie-tube"
+            },
+            {
+                type = "unlock-recipe",
+                recipe = "million-reinforced-nixie-tube"
             }
         },
         order = (data.raw["technology"]["circuit-network"].order or "") .. "[nt]-b[reinforced]"

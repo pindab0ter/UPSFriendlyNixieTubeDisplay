@@ -1,6 +1,6 @@
 This is a fork of Santa's Nixie Tubes [mod](https://mods.factorio.com/mod/SantasNixieTubeDisplay) that has better performance and other improvements.
 
-Download the mod from the [Factorio Mods Portal](https://mods.factorio.com/mod/UPSFriendlyNixieTubeDisplayFixed)
+Download the mod from the [Factorio Mod Portal](https://mods.factorio.com/mod/UPSFriendlyNixieTubeDisplay).
 
 ## Features
 
@@ -40,6 +40,7 @@ This project is licensed under the MIT License.
 [original mod](https://mods.factorio.com/mod/nixie-tubes).
 
 [pindab0ter](https://github.com/pindab0ter) for improving this mod and making it compatible with Factorio 2.0.
+
 [n00mkrad](https://github.com/n00mkrad) for Remote View fix and localization.
 
 ### Translations

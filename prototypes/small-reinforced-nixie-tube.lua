@@ -13,7 +13,7 @@ circuit_connector_definitions["small-reinforced-nixie-tube"] = circuit_connector
 
 local function build_sprite(character)
     local orientation = {
-        filename = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/reinforced-nixie-tube-numbers.png",
+        filename = "__UPSFriendlyNixieTubeDisplay__/graphics/reinforced-nixie-tube-numbers.png",
         width = 20,
         height = 44,
         scale = 0.5,
@@ -48,7 +48,7 @@ data:extend {
     {
         type = "item",
         name = "small-reinforced-nixie-tube",
-        icon = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/small-reinforced-nixie-tube-icon.png",
+        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/small-reinforced-nixie-tube-icon.png",
         icon_size = 32,
         subgroup = "circuit-network",
         order = "a[lamp]-b[nixie-tube]-c[small]",
@@ -59,7 +59,7 @@ data:extend {
         type = "lamp",
         name = "small-reinforced-nixie-tube",
         order = "z[zebra]",
-        icon = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/small-reinforced-nixie-tube-icon.png",
+        icon = "__UPSFriendlyNixieTubeDisplay__/graphics/small-reinforced-nixie-tube-icon.png",
         icon_size = 32,
         collision_box = {
             { x = -0.35, y = -0.35 },
@@ -88,13 +88,13 @@ data:extend {
         },
         corpse = "small-remnants",
         picture_on = {
-            filename = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/empty.png",
+            filename = "__UPSFriendlyNixieTubeDisplay__/graphics/empty.png",
             priority = "low",
             width = 1,
             height = 1,
         },
         picture_off = {
-            filename = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/small-reinforced-nixie-tube-base.png",
+            filename = "__UPSFriendlyNixieTubeDisplay__/graphics/small-reinforced-nixie-tube-base.png",
             priority = "high",
             width = 48,
             height = 42,
@@ -141,7 +141,7 @@ data:extend {
     {
         type                           = "arithmetic-combinator",
         name                           = "small-reinforced-nixie-tube-sprite",
-        icon                           = "__UPSFriendlyNixieTubeDisplayFixed__/graphics/small-reinforced-nixie-tube-icon.png",
+        icon                           = "__UPSFriendlyNixieTubeDisplay__/graphics/small-reinforced-nixie-tube-icon.png",
         icon_size                      = 32,
         flags                          = {
             "placeable-off-grid",

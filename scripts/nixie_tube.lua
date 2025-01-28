@@ -394,7 +394,7 @@ local function on_tick(_)
     local eyes_on_surface = {}
     for i = 1, #game.connected_players do
         local player = game.connected_players[i]
-        if player.render_mode == defines.render_mode.game then
+        if player.render_mode == defines.render_mode.game or player.render_mode == defines.render_mode.chart_zoomed_in then
             eyes_on_surface[player.surface_index] = (eyes_on_surface[player.surface_index] or 0) + 1
         end
     end

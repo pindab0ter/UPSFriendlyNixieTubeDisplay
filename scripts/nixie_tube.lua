@@ -33,6 +33,10 @@ storage = {
     --- @type number
     controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value) or
         error("nixie-tube-group-updates-per-tick not set"),
+    
+    --- @type boolean
+    use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value or
+        error("nixie-tube-enable-overflow-notation not set"),
 
     --- @type table<uint, boolean>
     invalidated_this_tick = {}
@@ -212,17 +216,22 @@ local function update_controller(controller)
         controller.previous_value = signal_value
     end
 
-    -- Calculate total digits once at controller level
-    local total_digits = 0
-    local current_display = display
-    while current_display do
-        total_digits = total_digits + digit_counts[current_display.entity.name]
-        current_display = current_display.next_display and storage.displays[current_display.next_display]
-    end
-
     local value_str = ("%i"):format(signal_value)
-    -- Pass total_digits to display_characters
-    display_characters(display, value_str, total_digits)
+
+    if storage.use_overflow_notation then
+            -- Calculate total digits once at controller level
+        local total_digits = 0
+        local current_display = display
+        while current_display do
+            total_digits = total_digits + digit_counts[current_display.entity.name]
+            current_display = current_display.next_display and storage.displays[current_display.next_display]
+        end
+
+        -- Pass total_digits to display_characters
+        display_characters(display, value_str, total_digits)
+    else
+        display_characters(display, value_str)
+    end
 end
 
 
@@ -516,11 +525,14 @@ local function on_runtime_mod_setting_changed(event)
     if event.setting == "nixie-tube-group-updates-per-tick" then
         storage.controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value)
     end
+    if event.setting == "nixie-tube-enable-overflow-notation" then
+        storage.use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value
+    end
 end
 
 script.on_configuration_changed(function ()
     storage.controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value)
-
+    storage.use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value
     reconfigure_nixie_tubes()
 end)
 

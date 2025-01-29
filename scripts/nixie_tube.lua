@@ -235,7 +235,7 @@ end
 --- @param display NixieTubeDisplay
 --- @param direction "east"|"west"
 local function invalidate_cache(display, direction)
-    if storage.invalidated_this_tick[display.entity.unit_number] then
+    if not display or not display.entity.valid or storage.invalidated_this_tick[display.entity.unit_number] then
         return
     end
 

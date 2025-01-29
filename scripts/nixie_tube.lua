@@ -44,6 +44,12 @@ local digit_counts = {
     ['small-reinforced-nixie-tube'] = 2
 }
 
+local overflow_chars = {
+    ['classic-nixie-tube'] = '9',
+    ['reinforced-nixie-tube'] = '9',
+    ['small-reinforced-nixie-tube'] = '99'
+}
+
 local state_display = {
     ["-"] = "-",
     ["0"] = "*",
@@ -120,7 +126,8 @@ end
 --- Display the characters on this and adjacent Nixie Tubes
 --- @param display NixieTubeDisplay
 --- @param characters string
-local function display_characters(display, characters)
+--- @param total_digits number?
+local function display_characters(display, characters, total_digits)
     if not (display and display.entity and display.entity.valid) then
         return
     end
@@ -128,41 +135,35 @@ local function display_characters(display, characters)
     local digit_count = digit_counts[display.entity.name]
 
     if characters == "off" then
-        -- Set this display to 'off'
         set_arithmetic_combinators(display, (digit_count == 1) and { "off" } or { "off", "off" })
-    elseif #characters < digit_count then
-        -- Display the last digit
-        set_arithmetic_combinators(display, { "off", characters:sub(-1) })
-    elseif #characters >= digit_count then
-        -- Display the rightmost `sprite_count` digits
-        set_arithmetic_combinators(
-            display,
-            (digit_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
-        )
+    else
+        -- Only check length at the first display (controller) using total_digits
+        if total_digits and #characters > total_digits then
+            characters = string.rep("9", total_digits)
+        end
+
+        if #characters < digit_count then
+            set_arithmetic_combinators(display, { "off", characters:sub(-1) })
+        elseif #characters >= digit_count then
+            set_arithmetic_combinators(
+                display,
+                (digit_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
+            )
+        end
     end
 
-    -- Draw remainder on the next display
     if display.next_display then
         local next_display = storage.displays[display.next_display]
+        if not (next_display and next_display.entity.valid) then return end
 
-        if not (next_display and next_display.entity and next_display.entity.valid) then
-            return
-        end
+        local remaining_value = (#characters <= digit_count or characters == "off") and "off" 
+            or characters:sub(1, -(digit_count + 1))
 
-        local remaining_value
-        if #characters <= digit_count or characters == "off" then
-            remaining_value = "off"
-        else
-            remaining_value = characters:sub(1, -(digit_count + 1))
-        end
-
-        if next_display.remaining_value == remaining_value then
-            return
-        else
+        if next_display.remaining_value ~= remaining_value then
             next_display.remaining_value = remaining_value
+            -- Pass total_digits to maintain context through the chain
+            display_characters(next_display, remaining_value, total_digits)
         end
-
-        display_characters(next_display, remaining_value)
     end
 end
 
@@ -211,7 +212,17 @@ local function update_controller(controller)
         controller.previous_value = signal_value
     end
 
-    display_characters(display, ("%i"):format(signal_value))
+    -- Calculate total digits once at controller level
+    local total_digits = 0
+    local current_display = display
+    while current_display do
+        total_digits = total_digits + digit_counts[current_display.entity.name]
+        current_display = current_display.next_display and storage.displays[current_display.next_display]
+    end
+
+    local value_str = ("%i"):format(signal_value)
+    -- Pass total_digits to display_characters
+    display_characters(display, value_str, total_digits)
 end
 
 

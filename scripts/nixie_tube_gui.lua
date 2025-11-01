@@ -50,7 +50,7 @@ function nixie_tube_gui.update_gui(self, new_entity)
 end
 
 --- @param entity LuaEntity
-function nixie_tube_gui.update_all_guis(entity)
+function nixie_tube_gui.update_guis_for_entity(entity)
     for _, gui in pairs(storage.gui) do
         if not gui.entity.valid or gui.entity == entity then
             nixie_tube_gui.update_gui(gui, entity)
@@ -186,7 +186,7 @@ function nixie_tube_gui.on_nt_gui_elem_changed(self, event)
     if nixie_tube_gui.callbacks.on_nt_gui_elem_changed then
         nixie_tube_gui.callbacks.on_nt_gui_elem_changed(self, event)
     end
-    nixie_tube_gui.update_all_guis(self.entity)
+    nixie_tube_gui.update_guis_for_entity(self.entity)
 end
 
 gui.add_handlers(nixie_tube_gui, function (event, handler)

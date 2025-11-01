@@ -1,27 +1,15 @@
 local helpers = {}
 
-local entity_names = {
-    'classic-nixie-tube',
-    'reinforced-nixie-tube',
-    'small-reinforced-nixie-tube'
+local entity_names_set = {
+    ['classic-nixie-tube'] = true,
+    ['reinforced-nixie-tube'] = true,
+    ['small-reinforced-nixie-tube'] = true
 }
-
----Determine if a table with contiguous keys has the given value.
----@param table table
----@return boolean
-function helpers.table_contains(table, value)
-    for i = 1, #table do
-        if table[i] == value then
-            return true
-        end
-    end
-    return false
-end
 
 --- @param entity LuaEntity
 --- @return boolean
 function helpers.is_nixie_tube(entity)
-    return helpers.table_contains(entity_names, entity.name)
+    return entity_names_set[entity.name] == true
 end
 
 --- @param nixie_tube LuaEntity

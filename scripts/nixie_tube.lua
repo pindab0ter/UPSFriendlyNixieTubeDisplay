@@ -512,8 +512,9 @@ local function on_object_destroyed(event)
                 local new_control_behavior = next_display.entity.get_or_create_control_behavior() --[[@as LuaLampControlBehavior?]]
                 if new_control_behavior then
                     new_control_behavior.circuit_condition = old_controller_settings
-                    controller.control_behavior = new_control_behavior
-                    controller.previous_signal = old_controller_settings.first_signal
+                    -- Reset the cached values so the controller will re-evaluate on next update
+                    controller.previous_signal = nil
+                    controller.previous_value = nil
                 end
             end
             

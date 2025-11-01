@@ -57,8 +57,8 @@ function helpers.storage_set_controller(nixie_tube, data)
         controller = {
             entity = nixie_tube,
             control_behavior = nil,
-            signal = nil,
-            last_value = nil
+            previous_signal = nil,
+            previous_value = nil
         }
         storage.controllers[nixie_tube.unit_number] = controller
     end

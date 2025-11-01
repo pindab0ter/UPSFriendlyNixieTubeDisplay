@@ -28,6 +28,9 @@ function nixie_tube_gui.destroy_gui(player_index)
 end
 
 function nixie_tube_gui.destroy_all_guis()
+    if not next(storage.gui) then
+        return
+    end
     for player_index, _ in pairs(storage.gui) do
         nixie_tube_gui.destroy_gui(player_index)
     end
@@ -180,7 +183,9 @@ end
 --- @param self NixieTubeGui
 --- @param event EventData.on_gui_selection_state_changed
 function nixie_tube_gui.on_nt_gui_elem_changed(self, event)
-    nixie_tube_gui.callbacks.on_nt_gui_elem_changed(self, event)
+    if nixie_tube_gui.callbacks.on_nt_gui_elem_changed then
+        nixie_tube_gui.callbacks.on_nt_gui_elem_changed(self, event)
+    end
     nixie_tube_gui.update_all_guis(self.entity)
 end
 

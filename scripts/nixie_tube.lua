@@ -300,7 +300,7 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
     end
 
     -- Process the Nixie Tube to the east.
-    eastern_neighbors = nixie_tube.surface.find_entities_filtered {
+    local eastern_neighbors = nixie_tube.surface.find_entities_filtered {
         position = { x = nixie_tube.position.x + 1, y = nixie_tube.position.y },
         name = nixie_tube.name,
     }
@@ -433,6 +433,10 @@ local function on_tick(_)
             storage.next_controller_unit_number, controller = next(storage.controllers)
         end
 
+        if not controller then
+            break
+        end
+
         if not controller.entity.valid then
             reconfigure_nixie_tubes()
             break
@@ -475,7 +479,7 @@ local function on_object_destroyed(event)
     destroy_arithmetic_combinators(entity)
 
     -- Promote the next display (to the west) to a controller if there is one
-    display = storage.displays[entity.unit_number]
+    local display = storage.displays[entity.unit_number]
 
     if display and display.next_display then
         local next_display = storage.displays[display.next_display]

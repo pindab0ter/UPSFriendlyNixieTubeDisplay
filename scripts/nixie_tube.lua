@@ -224,6 +224,11 @@ end
 --- @param display NixieTubeDisplay
 --- @param direction "east"|"west"
 local function invalidate_cache(display, direction)
+    -- Validate that display and its entity exist and are valid
+    if not display or not display.entity or not display.entity.valid then
+        return
+    end
+
     if storage.invalidated_this_tick[display.entity.unit_number] then
         return
     end
@@ -232,7 +237,10 @@ local function invalidate_cache(display, direction)
     storage.invalidated_this_tick[display.entity.unit_number] = true
 
     if direction == "west" and display.next_display then
-        invalidate_cache(storage.displays[display.next_display], direction)
+        local next_display = storage.displays[display.next_display]
+        if next_display then
+            invalidate_cache(next_display, direction)
+        end
     elseif direction == "east" then
         for _, other_display in pairs(storage.displays) do
             if other_display.next_display == display.entity.unit_number then
@@ -275,12 +283,17 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
             end
 
             storage.controllers[neighbor.unit_number] = nil
-            local neighbor_display = helpers.storage_set_display(nixie_tube, {
+            
+            -- Ensure the western neighbor's display is properly set up
+            local western_neighbor_display = helpers.storage_set_display(neighbor)
+            
+            -- Set the current nixie_tube's display to point to the western neighbor
+            local current_display = helpers.storage_set_display(nixie_tube, {
                 next_display = neighbor.unit_number
             })
 
             if invalidate_caches ~= false then
-                invalidate_cache(neighbor_display, "west")
+                invalidate_cache(western_neighbor_display, "west")
             end
         end
     end
@@ -295,6 +308,22 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
     for _, neighbor in pairs(eastern_neighbors) do
         if neighbor.valid then
             has_eastern_neighbor = true
+            
+            -- If the eastern neighbor was a controller, it should no longer be one
+            -- since we're placing a tube to its west (making it not the rightmost anymore)
+            if storage.controllers[neighbor.unit_number] then
+                if storage.next_controller_unit_number == neighbor.unit_number then
+                    storage.next_controller_unit_number = nil
+                end
+                
+                local neighbor_control_behavior = neighbor.get_control_behavior() --[[@as LuaLampControlBehavior?]]
+                if neighbor_control_behavior then
+                    neighbor_control_behavior.circuit_condition = nil
+                end
+                
+                storage.controllers[neighbor.unit_number] = nil
+            end
+            
             local neighbor_display = helpers.storage_set_display(neighbor, {
                 next_display = nixie_tube.unit_number,
             })
@@ -457,14 +486,37 @@ local function on_object_destroyed(event)
 
     destroy_arithmetic_combinators(entity)
 
+    -- Check if the destroyed entity was a controller
+    local was_controller = storage.controllers[entity.unit_number] ~= nil
+    local old_controller_settings = nil
+    
+    if was_controller then
+        -- Save the controller's circuit condition before removing it
+        local control_behavior = entity.get_control_behavior() --[[@as LuaLampControlBehavior?]]
+        if control_behavior and control_behavior.circuit_condition then
+            old_controller_settings = control_behavior.circuit_condition
+        end
+    end
+
     -- Promote the next display (to the west) to a controller if there is one
-    display = storage.displays[entity.unit_number]
+    local display = storage.displays[entity.unit_number]
 
     if display and display.next_display then
         local next_display = storage.displays[display.next_display]
 
-        if next_display then
+        if next_display and next_display.entity and next_display.entity.valid then
             local controller = helpers.storage_set_controller(next_display.entity)
+            
+            -- If the destroyed entity was a controller, transfer its settings to the new controller
+            if was_controller and old_controller_settings then
+                local new_control_behavior = next_display.entity.get_or_create_control_behavior() --[[@as LuaLampControlBehavior?]]
+                if new_control_behavior then
+                    new_control_behavior.circuit_condition = old_controller_settings
+                    controller.control_behavior = new_control_behavior
+                    controller.previous_signal = old_controller_settings.first_signal
+                end
+            end
+            
             storage.next_controller_unit_number = controller.entity.unit_number
             update_controller(controller)
         else

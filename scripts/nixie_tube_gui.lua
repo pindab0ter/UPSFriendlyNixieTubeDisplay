@@ -28,6 +28,9 @@ function nixie_tube_gui.destroy_gui(player_index)
 end
 
 function nixie_tube_gui.destroy_all_guis()
+    if not next(storage.gui) then
+        return
+    end
     for player_index, _ in pairs(storage.gui) do
         nixie_tube_gui.destroy_gui(player_index)
     end
@@ -47,7 +50,7 @@ function nixie_tube_gui.update_gui(self, new_entity)
 end
 
 --- @param entity LuaEntity
-function nixie_tube_gui.update_all_guis(entity)
+function nixie_tube_gui.update_guis_for_entity(entity)
     for _, gui in pairs(storage.gui) do
         if not gui.entity.valid or gui.entity == entity then
             nixie_tube_gui.update_gui(gui, entity)
@@ -180,8 +183,10 @@ end
 --- @param self NixieTubeGui
 --- @param event EventData.on_gui_selection_state_changed
 function nixie_tube_gui.on_nt_gui_elem_changed(self, event)
-    nixie_tube_gui.callbacks.on_nt_gui_elem_changed(self, event)
-    nixie_tube_gui.update_all_guis(self.entity)
+    if nixie_tube_gui.callbacks.on_nt_gui_elem_changed then
+        nixie_tube_gui.callbacks.on_nt_gui_elem_changed(self, event)
+    end
+    nixie_tube_gui.update_guis_for_entity(self.entity)
 end
 
 gui.add_handlers(nixie_tube_gui, function (event, handler)

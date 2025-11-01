@@ -7,6 +7,7 @@ local helpers = require("scripts.helpers")
 --- @field control_behavior LuaLampControlBehavior?
 --- @field previous_signal SignalID?
 --- @field previous_value int?
+--- @field total_digits int? Cached total digit count for the display chain (for overflow detection)
 
 --- @class NixieTubeDisplay The aspect of a Nixie Tube responsible for displaying one or two digits
 --- @field entity LuaEntity
@@ -33,6 +34,10 @@ storage = {
     --- @type number
     controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value) or
         error("nixie-tube-group-updates-per-tick not set"),
+
+    --- @type boolean
+    use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value or
+        error("nixie-tube-enable-overflow-notation not set"),
 
     --- @type table<uint, boolean>
     invalidated_this_tick = {}
@@ -128,41 +133,29 @@ local function display_characters(display, characters)
     local digit_count = digit_counts[display.entity.name]
 
     if characters == "off" then
-        -- Set this display to 'off'
         set_arithmetic_combinators(display, (digit_count == 1) and { "off" } or { "off", "off" })
-    elseif #characters < digit_count then
-        -- Display the last digit
-        set_arithmetic_combinators(display, { "off", characters:sub(-1) })
-    elseif #characters >= digit_count then
-        -- Display the rightmost `sprite_count` digits
-        set_arithmetic_combinators(
-            display,
-            (digit_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
-        )
+    else
+        if #characters < digit_count then
+            set_arithmetic_combinators(display, { "off", characters:sub(-1) })
+        elseif #characters >= digit_count then
+            set_arithmetic_combinators(
+                display,
+                (digit_count == 1) and { characters:sub(-1) } or { characters:sub(-2, -2), characters:sub(-1) }
+            )
+        end
     end
 
-    -- Draw remainder on the next display
     if display.next_display then
         local next_display = storage.displays[display.next_display]
+        if not (next_display and next_display.entity.valid) then return end
 
-        if not (next_display and next_display.entity and next_display.entity.valid) then
-            return
-        end
+        local remaining_value = (#characters <= digit_count or characters == "off") and "off"
+            or characters:sub(1, -(digit_count + 1))
 
-        local remaining_value
-        if #characters <= digit_count or characters == "off" then
-            remaining_value = "off"
-        else
-            remaining_value = characters:sub(1, -(digit_count + 1))
-        end
-
-        if next_display.remaining_value == remaining_value then
-            return
-        else
+        if next_display.remaining_value ~= remaining_value then
             next_display.remaining_value = remaining_value
+            display_characters(next_display, remaining_value)
         end
-
-        display_characters(next_display, remaining_value)
     end
 end
 
@@ -211,7 +204,28 @@ local function update_controller(controller)
         controller.previous_value = signal_value
     end
 
-    display_characters(display, ("%i"):format(signal_value))
+    local value_str = ("%i"):format(signal_value)
+
+    -- Check for overflow if the setting is enabled
+    if storage.use_overflow_notation then
+        -- Calculate total digits available in the display chain (cached on controller)
+        if not controller.total_digits then
+            local total_digits = 0
+            local current_display = display
+            while current_display do
+                total_digits = total_digits + digit_counts[current_display.entity.name]
+                current_display = current_display.next_display and storage.displays[current_display.next_display]
+            end
+            controller.total_digits = total_digits
+        end
+
+        -- If the value is too large, replace with all 9s at the correct length
+        if #value_str > controller.total_digits then
+            value_str = string.rep("9", controller.total_digits)
+        end
+    end
+
+    display_characters(display, value_str)
 end
 
 
@@ -224,7 +238,7 @@ end
 --- @param display NixieTubeDisplay
 --- @param direction "east"|"west"
 local function invalidate_cache(display, direction)
-    if storage.invalidated_this_tick[display.entity.unit_number] then
+    if not display or not display.entity.valid or storage.invalidated_this_tick[display.entity.unit_number] then
         return
     end
 
@@ -286,7 +300,7 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
     end
 
     -- Process the Nixie Tube to the east.
-    eastern_neighbors = nixie_tube.surface.find_entities_filtered {
+    local eastern_neighbors = nixie_tube.surface.find_entities_filtered {
         position = { x = nixie_tube.position.x + 1, y = nixie_tube.position.y },
         name = nixie_tube.name,
     }
@@ -309,6 +323,9 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
     if not has_eastern_neighbor then
         helpers.storage_set_controller(nixie_tube)
     end
+
+    -- Invalidate controller caches since the chain structure may have changed
+    helpers.invalidate_all_controller_caches()
 end
 
 --- Clears the storage, removes all Nixie Tubes and arithmetic combinators, and adds them back in
@@ -416,12 +433,16 @@ local function on_tick(_)
             storage.next_controller_unit_number, controller = next(storage.controllers)
         end
 
+        if not controller then
+            break
+        end
+
         if not controller.entity.valid then
             reconfigure_nixie_tubes()
             break
         end
 
-        -- If no player is abl see Nixie Tubes on this surface, skip the update
+        -- If no player is able to see Nixie Tubes on this surface, skip the update
         if eyes_on_surface[controller.entity.surface_index] then
             update_controller(controller)
         end
@@ -458,7 +479,7 @@ local function on_object_destroyed(event)
     destroy_arithmetic_combinators(entity)
 
     -- Promote the next display (to the west) to a controller if there is one
-    display = storage.displays[entity.unit_number]
+    local display = storage.displays[entity.unit_number]
 
     if display and display.next_display then
         local next_display = storage.displays[display.next_display]
@@ -476,6 +497,9 @@ local function on_object_destroyed(event)
 
     storage.displays[entity.unit_number] = nil
     storage.controllers[entity.unit_number] = nil
+
+    -- Invalidate controller caches since the chain structure has changed
+    helpers.invalidate_all_controller_caches()
 end
 
 --- @param event EventData.on_script_trigger_effect
@@ -505,11 +529,14 @@ local function on_runtime_mod_setting_changed(event)
     if event.setting == "nixie-tube-group-updates-per-tick" then
         storage.controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value)
     end
+    if event.setting == "nixie-tube-enable-overflow-notation" then
+        storage.use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value
+    end
 end
 
 script.on_configuration_changed(function ()
     storage.controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value)
-
+    storage.use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value
     reconfigure_nixie_tubes()
 end)
 

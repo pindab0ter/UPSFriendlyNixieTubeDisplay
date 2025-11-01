@@ -1,27 +1,15 @@
 local helpers = {}
 
-local entity_names = {
-    'classic-nixie-tube',
-    'reinforced-nixie-tube',
-    'small-reinforced-nixie-tube'
+local entity_names_set = {
+    ['classic-nixie-tube'] = true,
+    ['reinforced-nixie-tube'] = true,
+    ['small-reinforced-nixie-tube'] = true
 }
-
----Determine if a table with contiguous keys has the given value.
----@param table table
----@return boolean
-function helpers.table_contains(table, value)
-    for i = 1, #table do
-        if table[i] == value then
-            return true
-        end
-    end
-    return false
-end
 
 --- @param entity LuaEntity
 --- @return boolean
 function helpers.is_nixie_tube(entity)
-    return helpers.table_contains(entity_names, entity.name)
+    return entity_names_set[entity.name] == true
 end
 
 --- @param nixie_tube LuaEntity
@@ -57,8 +45,8 @@ function helpers.storage_set_controller(nixie_tube, data)
         controller = {
             entity = nixie_tube,
             control_behavior = nil,
-            signal = nil,
-            last_value = nil
+            previous_signal = nil,
+            previous_value = nil
         }
         storage.controllers[nixie_tube.unit_number] = controller
     end
@@ -68,6 +56,13 @@ function helpers.storage_set_controller(nixie_tube, data)
     end
 
     return controller
+end
+
+--- Invalidate all controller caches (total_digits)
+function helpers.invalidate_all_controller_caches()
+    for _, controller in pairs(storage.controllers) do
+        controller.total_digits = nil
+    end
 end
 
 return helpers

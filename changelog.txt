@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.3.0
+Date: 2025-02-05
+  Features:
+    - Added overflow notation "999..." when numbers exceed display capacity (credit to n00mkrad)
+  Bugfixes:
+    - Fixed crash when undoing deconstruction of nixie tubes
+---------------------------------------------------------------------------------------------------
 Version: 0.2.9
 Date: 2025-01-27
   Bugfixes:

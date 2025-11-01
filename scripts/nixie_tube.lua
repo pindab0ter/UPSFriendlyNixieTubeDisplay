@@ -33,7 +33,7 @@ storage = {
     --- @type number
     controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value) or
         error("nixie-tube-group-updates-per-tick not set"),
-    
+
     --- @type boolean
     use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value or
         error("nixie-tube-enable-overflow-notation not set"),
@@ -46,12 +46,6 @@ local digit_counts = {
     ['classic-nixie-tube'] = 1,
     ['reinforced-nixie-tube'] = 1,
     ['small-reinforced-nixie-tube'] = 2
-}
-
-local overflow_chars = {
-    ['classic-nixie-tube'] = '9',
-    ['reinforced-nixie-tube'] = '9',
-    ['small-reinforced-nixie-tube'] = '99'
 }
 
 local state_display = {
@@ -160,7 +154,7 @@ local function display_characters(display, characters, total_digits)
         local next_display = storage.displays[display.next_display]
         if not (next_display and next_display.entity.valid) then return end
 
-        local remaining_value = (#characters <= digit_count or characters == "off") and "off" 
+        local remaining_value = (#characters <= digit_count or characters == "off") and "off"
             or characters:sub(1, -(digit_count + 1))
 
         if next_display.remaining_value ~= remaining_value then

@@ -7,6 +7,7 @@ local helpers = require("scripts.helpers")
 --- @field control_behavior LuaLampControlBehavior?
 --- @field previous_signal SignalID?
 --- @field previous_value int?
+--- @field total_digits int? Cached total digit count for the display chain (for overflow detection)
 
 --- @class NixieTubeDisplay The aspect of a Nixie Tube responsible for displaying one or two digits
 --- @field entity LuaEntity
@@ -124,8 +125,7 @@ end
 --- Display the characters on this and adjacent Nixie Tubes
 --- @param display NixieTubeDisplay
 --- @param characters string
---- @param total_digits number?
-local function display_characters(display, characters, total_digits)
+local function display_characters(display, characters)
     if not (display and display.entity and display.entity.valid) then
         return
     end
@@ -135,11 +135,6 @@ local function display_characters(display, characters, total_digits)
     if characters == "off" then
         set_arithmetic_combinators(display, (digit_count == 1) and { "off" } or { "off", "off" })
     else
-        -- Only check length at the first display (controller) using total_digits
-        if total_digits and #characters > total_digits then
-            characters = string.rep("9", total_digits)
-        end
-
         if #characters < digit_count then
             set_arithmetic_combinators(display, { "off", characters:sub(-1) })
         elseif #characters >= digit_count then
@@ -159,8 +154,7 @@ local function display_characters(display, characters, total_digits)
 
         if next_display.remaining_value ~= remaining_value then
             next_display.remaining_value = remaining_value
-            -- Pass total_digits to maintain context through the chain
-            display_characters(next_display, remaining_value, total_digits)
+            display_characters(next_display, remaining_value)
         end
     end
 end
@@ -212,20 +206,26 @@ local function update_controller(controller)
 
     local value_str = ("%i"):format(signal_value)
 
+    -- Check for overflow if the setting is enabled
     if storage.use_overflow_notation then
-            -- Calculate total digits once at controller level
-        local total_digits = 0
-        local current_display = display
-        while current_display do
-            total_digits = total_digits + digit_counts[current_display.entity.name]
-            current_display = current_display.next_display and storage.displays[current_display.next_display]
+        -- Calculate total digits available in the display chain (cached on controller)
+        if not controller.total_digits then
+            local total_digits = 0
+            local current_display = display
+            while current_display do
+                total_digits = total_digits + digit_counts[current_display.entity.name]
+                current_display = current_display.next_display and storage.displays[current_display.next_display]
+            end
+            controller.total_digits = total_digits
         end
 
-        -- Pass total_digits to display_characters
-        display_characters(display, value_str, total_digits)
-    else
-        display_characters(display, value_str)
+        -- If the value is too large, replace with all 9s at the correct length
+        if #value_str > controller.total_digits then
+            value_str = string.rep("9", controller.total_digits)
+        end
     end
+
+    display_characters(display, value_str)
 end
 
 
@@ -323,6 +323,9 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
     if not has_eastern_neighbor then
         helpers.storage_set_controller(nixie_tube)
     end
+
+    -- Invalidate controller caches since the chain structure may have changed
+    helpers.invalidate_all_controller_caches()
 end
 
 --- Clears the storage, removes all Nixie Tubes and arithmetic combinators, and adds them back in
@@ -435,7 +438,7 @@ local function on_tick(_)
             break
         end
 
-        -- If no player is abl see Nixie Tubes on this surface, skip the update
+        -- If no player is able to see Nixie Tubes on this surface, skip the update
         if eyes_on_surface[controller.entity.surface_index] then
             update_controller(controller)
         end
@@ -490,6 +493,9 @@ local function on_object_destroyed(event)
 
     storage.displays[entity.unit_number] = nil
     storage.controllers[entity.unit_number] = nil
+
+    -- Invalidate controller caches since the chain structure has changed
+    helpers.invalidate_all_controller_caches()
 end
 
 --- @param event EventData.on_script_trigger_effect

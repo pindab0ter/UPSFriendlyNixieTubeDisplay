@@ -70,4 +70,11 @@ function helpers.storage_set_controller(nixie_tube, data)
     return controller
 end
 
+--- Invalidate all controller caches (total_digits)
+function helpers.invalidate_all_controller_caches()
+    for _, controller in pairs(storage.controllers) do
+        controller.total_digits = nil
+    end
+end
+
 return helpers

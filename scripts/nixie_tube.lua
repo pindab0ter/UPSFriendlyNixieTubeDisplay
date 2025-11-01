@@ -288,7 +288,7 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
             local western_neighbor_display = helpers.storage_set_display(neighbor)
             
             -- Set the current nixie_tube's display to point to the western neighbor
-            local current_display = helpers.storage_set_display(nixie_tube, {
+            helpers.storage_set_display(nixie_tube, {
                 next_display = neighbor.unit_number
             })
 
@@ -299,7 +299,7 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
     end
 
     -- Process the Nixie Tube to the east.
-    eastern_neighbors = nixie_tube.surface.find_entities_filtered {
+    local eastern_neighbors = nixie_tube.surface.find_entities_filtered {
         position = { x = nixie_tube.position.x + 1, y = nixie_tube.position.y },
         name = nixie_tube.name,
     }

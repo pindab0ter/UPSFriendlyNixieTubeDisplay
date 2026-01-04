@@ -554,6 +554,7 @@ script.on_init(function ()
     script.on_event(defines.events.on_entity_died, on_object_destroyed)
     script.on_event(defines.events.on_player_mined_entity, on_object_destroyed)
     script.on_event(defines.events.on_robot_mined_entity, on_object_destroyed)
+	script.on_event(defines.events.on_space_platform_mined_entity, on_object_destroyed)
     script.on_event(defines.events.script_raised_destroy, on_object_destroyed)
 end)
 

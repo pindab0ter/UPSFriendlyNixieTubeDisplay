@@ -3,10 +3,7 @@
   "version": "0.3.1",
   "factorio_version": "2.0",
   "title": "UPS Friendly Nixie Tubes",
-  "author": [
-      "Red_Wizard",
-      "pindab0ter"
-  ],
+  "author": "Red_Wizard, pindab0ter",
   "contact": "",
   "homepage": "https://github.com/pindab0ter/UPSFriendlyNixieTubeDisplay",
   "description": "A UPS friendly Nixie Tube mod.",

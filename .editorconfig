@@ -1,3 +1,5 @@
+[*.json]
+indent_size = 2
 
 # see https://github.com/CppCXY/EmmyLuaCodeStyle
 [*.lua]

@@ -1,0 +1,6 @@
+.claude/
+.github/
+.idea/
+.vscode/
+.editorconfig
+.gitignore

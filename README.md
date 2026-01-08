@@ -43,6 +43,8 @@ This project is licensed under the MIT License.
 
 [n00mkrad](https://github.com/n00mkrad) for Remote View fix and localization.
 
+[Speshkitty](https://github.com/Speshkitty) for multiplayer bugfix.
+
 ### Translations
 
 - Dutch

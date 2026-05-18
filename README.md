@@ -42,10 +42,10 @@ This project is licensed under the MIT License.
 [pindab0ter](https://github.com/pindab0ter) for improving this mod and making it compatible with Factorio 2.0.
 
 [n00mkrad](https://github.com/n00mkrad) for Remote View fix and localization.
-
 [Speshkitty](https://github.com/Speshkitty) for multiplayer bugfix.
+[nzdgg](https://github.com/nzdgg) for bugfixing.
 
-### Translations
+## Translations
 
 - Dutch
   - [pindab0ter](https://github.com/pindab0ter)

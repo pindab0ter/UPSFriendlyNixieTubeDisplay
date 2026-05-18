@@ -36,12 +36,17 @@ storage = {
         error("nixie-tube-group-updates-per-tick not set"),
 
     --- @type boolean
-    use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value or
-        error("nixie-tube-enable-overflow-notation not set"),
+    use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value,
 
     --- @type table<uint, boolean>
     invalidated_this_tick = {}
 }
+
+-- Additional error checks for "storage" constructuor
+if storage.use_overflow_notation == nil
+  then
+    error("nixie-tube-enable-overflow-notation not set")
+  end
 
 local digit_counts = {
     ['classic-nixie-tube'] = 1,

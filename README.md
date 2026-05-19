@@ -45,6 +45,8 @@ This project is licensed under the MIT License.
 
 [Speshkitty](https://github.com/Speshkitty) for multiplayer bugfix.
 
+[nzdgg](https://github.com/nzdgg) for bugfixing.
+
 ### Translations
 
 - Dutch

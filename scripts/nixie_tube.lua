@@ -36,8 +36,7 @@ storage = {
         error("nixie-tube-group-updates-per-tick not set"),
 
     --- @type boolean
-    use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value or
-        error("nixie-tube-enable-overflow-notation not set"),
+    use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value --[[@as boolean]],
 
     --- @type table<uint, boolean>
     invalidated_this_tick = {}

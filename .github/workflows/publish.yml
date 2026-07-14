@@ -11,16 +11,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 2
 
-      - name: Check version bumped
+      - name: Check version not yet on the mod portal
         id: check
         run: |
-          NEW=$(jq -r .version info.json)
-          OLD=$(git show HEAD~1:info.json 2>/dev/null | jq -r .version || echo "")
-          if [ "$NEW" = "$OLD" ]; then
-            echo "Version unchanged ($NEW); skipping upload."
+          NAME=$(jq -r .name info.json)
+          VERSION=$(jq -r .version info.json)
+          if curl -sf "https://mods.factorio.com/api/mods/$NAME" | jq -e --arg v "$VERSION" '.releases[]? | select(.version == $v)' > /dev/null; then
+            echo "Version $VERSION is already on the portal; skipping upload."
             echo "bumped=false" >> "$GITHUB_OUTPUT"
           else
             echo "bumped=true" >> "$GITHUB_OUTPUT"

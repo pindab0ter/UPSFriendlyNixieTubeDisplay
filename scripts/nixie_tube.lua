@@ -226,9 +226,14 @@ local function update_controller(controller)
             controller.total_digits = total_digits
         end
 
-        -- If the value is too large, replace with all 9s at the correct length
+        -- If the value is too large, replace with the largest value that fits
         if #value_str > controller.total_digits then
-            value_str = string.rep("9", controller.total_digits)
+            if signal_value < 0 then
+                -- The minus sign occupies a digit slot; a single tube shows just "-"
+                value_str = "-" .. string.rep("9", controller.total_digits - 1)
+            else
+                value_str = string.rep("9", controller.total_digits)
+            end
         end
     end
 

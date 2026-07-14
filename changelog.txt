@@ -12,6 +12,7 @@ Date: 2026-07-14
     - Fixed a crash when running /reconfigure-nixie-tubes from the server console
     - Fixed leftover floating digits and frozen displays when a Nixie Tube is removed by another mod or by deleting a surface
     - Cloned Nixie Tubes now work instead of staying blank
+    - Overflow notation now accounts for the minus sign, so negative values no longer show as a positive number (e.g. -12 on two tubes shows -9 instead of 99)
 ---------------------------------------------------------------------------------------------------
 Version: 0.3.2
 Date: 2026-05-19

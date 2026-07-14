@@ -47,24 +47,52 @@ function nixie_tube_gui.destroy_guis_for_entity(entity)
     end
 end
 
+--- Bring a GUI in line with the current state of its entity
 --- @param self NixieTubeGui
---- @param new_entity LuaEntity?
-function nixie_tube_gui.update_gui(self, new_entity)
-    if not new_entity and not self.entity.valid then
+function nixie_tube_gui.update_gui(self)
+    if not self.entity.valid then
         nixie_tube_gui.destroy_gui(self.player.index)
         return
     end
 
-    if new_entity then
-        self.entity = new_entity
+    -- Ghosts are not tracked in storage; their chooser only changes through the GUI itself
+    if self.entity.name == "entity-ghost" then
+        return
     end
+
+    local controller = storage.controllers[self.entity.unit_number]
+    local signal = controller and controller.selected_signal or nil
+    self.elements.nt_signal_chooser.elem_value = signal or nil
 end
 
 --- @param entity LuaEntity
 function nixie_tube_gui.update_guis_for_entity(entity)
     for _, player_gui in pairs(storage.gui) do
         if not player_gui.entity.valid or player_gui.entity == entity then
-            nixie_tube_gui.update_gui(player_gui, entity)
+            nixie_tube_gui.update_gui(player_gui)
+        end
+    end
+end
+
+--- Refresh the value readout and signal chooser of all open GUIs. Runs every tick while any GUI is open,
+--- so only touches elements when something changed
+function nixie_tube_gui.update_guis()
+    for _, player_gui in pairs(storage.gui) do
+        local entity = player_gui.entity
+        if entity.valid and entity.name ~= "entity-ghost" then
+            local controller = storage.controllers[entity.unit_number]
+
+            local value = controller and controller.previous_value
+            if player_gui.last_value ~= value then
+                player_gui.last_value = value
+                player_gui.elements.nt_value_label.caption = value and ("%i"):format(value) or ""
+            end
+
+            local signal = controller and controller.selected_signal or nil
+            if player_gui.last_signal ~= signal then
+                player_gui.last_signal = signal
+                player_gui.elements.nt_signal_chooser.elem_value = signal or nil
+            end
         end
     end
 end
@@ -80,7 +108,8 @@ function nixie_tube_gui.create_nixie_tube_gui(player, entity)
         return
     end
 
-    local is_controller = storage.controllers[entity.unit_number] ~= nil
+    local is_ghost = entity.name == "entity-ghost"
+    local is_controller = is_ghost or storage.controllers[entity.unit_number] ~= nil
     local circuit_condition = behavior.circuit_condition --[[@as CircuitCondition?]]
     local signal = circuit_condition and circuit_condition.first_signal
 
@@ -98,7 +127,7 @@ function nixie_tube_gui.create_nixie_tube_gui(player, entity)
             {
                 type = "label",
                 style = "flib_frame_title",
-                caption = "Nixie Tube",
+                caption = { "entity-name." .. (is_ghost and entity.ghost_name or entity.name) },
                 ignored_by_interaction = true,
             },
             { type = "empty-widget", style = "flib_titlebar_drag_handle", ignored_by_interaction = true },
@@ -119,6 +148,7 @@ function nixie_tube_gui.create_nixie_tube_gui(player, entity)
             {
                 type = "frame",
                 style = "deep_frame_in_shallow_frame",
+                style_mods = { horizontally_stretchable = true },
                 {
                     type = "camera",
                     position = entity.name == "classic-nixie-tube" and {
@@ -127,7 +157,7 @@ function nixie_tube_gui.create_nixie_tube_gui(player, entity)
                     } or entity.position,
                     surface_index = entity.surface.index,
                     zoom = 2,
-                    style_mods = { width = 125, height = 150 },
+                    style_mods = { minimal_width = 125, height = 150, horizontally_stretchable = true },
                 }
             },
             {
@@ -136,11 +166,12 @@ function nixie_tube_gui.create_nixie_tube_gui(player, entity)
                 style_mods = { top_margin = 4, vertical_align = "center" },
                 {
                     type = "label",
-                    caption = "Signal",
-                    style_mods = { width = 77 }
+                    caption = { "gui.nixie-tube-signal" },
                 },
+                { type = "empty-widget", style_mods = { horizontally_stretchable = true } },
                 {
                     type = "choose-elem-button",
+                    name = "nt_signal_chooser",
                     elem_type = "signal",
                     signal = signal,
                     enabled = is_controller,
@@ -149,21 +180,40 @@ function nixie_tube_gui.create_nixie_tube_gui(player, entity)
                     },
                 },
             },
+            { type = "line", visible = not is_ghost },
+            {
+                type = "flow",
+                style = "player_input_horizontal_flow",
+                style_mods = { vertical_align = "center" },
+                visible = not is_ghost,
+                {
+                    type = "label",
+                    caption = { "gui.nixie-tube-value" },
+                },
+                { type = "empty-widget", style_mods = { horizontally_stretchable = true } },
+                {
+                    type = "label",
+                    name = "nt_value_label",
+                    caption = "",
+                },
+            },
         },
     })
 
     player.opened = elements.nt_nixie_tube_window
 
     --- @class NixieTubeGui
+    --- @field last_value int? The value last written to the readout
+    --- @field last_signal SignalID|false|nil The signal last written to the chooser
     local self = {
         elements = elements,
         entity = entity,
         player = player,
+        last_value = nil,
+        last_signal = nil,
     }
 
     storage.gui[player.index] = self
-
-    nixie_tube_gui.update_gui(self)
 end
 
 --- @param event EventData.on_gui_opened
@@ -173,7 +223,12 @@ function nixie_tube_gui.on_gui_opened(event)
     end
 
     local entity = event.entity
-    if not entity or not entity.valid or not helpers.is_nixie_tube(entity) then
+    if not entity or not entity.valid then
+        return
+    end
+
+    local is_ghost = entity.name == "entity-ghost" and helpers.digit_counts[entity.ghost_name] ~= nil
+    if not is_ghost and not helpers.is_nixie_tube(entity) then
         return
     end
 
@@ -182,12 +237,25 @@ function nixie_tube_gui.on_gui_opened(event)
         return
     end
 
+    -- The signal is configured on the rightmost Nixie Tube of a row, so open that one instead
+    if not is_ghost then
+        local controller = helpers.find_chain_controller(entity.unit_number)
+        if controller and controller.entity.valid then
+            entity = controller.entity
+        end
+    end
+
     nixie_tube_gui.create_nixie_tube_gui(player, entity)
 end
 
 --- @param self NixieTubeGui
 --- @param event EventData.on_gui_closed|EventData.on_gui_click
 function nixie_tube_gui.on_nt_gui_closed(self, event)
+    local player = game.get_player(event.player_index)
+    if player and self.entity.valid and self.entity.name ~= "entity-ghost" then
+        player.play_sound { path = "entity-close/" .. self.entity.name }
+    end
+
     nixie_tube_gui.destroy_gui(event.player_index)
 end
 

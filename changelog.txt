@@ -3,6 +3,13 @@ Version: 0.4.0
 Date: 2026-07-14
   Features:
     - Factorio 2.1 compatibility
+    - Opening any Nixie Tube in a row now opens the configuration of its rightmost tube
+    - The GUI now shows the value the display is currently showing
+    - The signal can now be configured on Nixie Tube ghosts
+  Gui:
+    - The GUI title now names the Nixie Tube type and is localized, and closing plays a sound
+  Translation:
+    - Added German, Dutch, Polish and Russian translations for the new GUI strings
   Optimizations:
     - Digits are now only redrawn when the displayed value actually changes, significantly reducing script time for displays showing stable values
     - The selected signal is now cached instead of being re-read from the circuit condition every update

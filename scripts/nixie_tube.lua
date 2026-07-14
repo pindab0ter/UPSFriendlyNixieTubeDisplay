@@ -481,6 +481,10 @@ end
 local function on_tick(_)
     storage.invalidated_this_tick = {}
 
+    if next(storage.gui) ~= nil then
+        nixie_tube_gui.update_guis()
+    end
+
     -- There are no controllers to update
     if next(storage.controllers) == nil then
         return
@@ -618,6 +622,11 @@ nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
         first_signal = signal,
         second_signal = signal,
     }
+
+    -- Ghosts only carry the condition; they are configured when they are built
+    if nixie_tube.name == "entity-ghost" then
+        return
+    end
 
     local controller = helpers.storage_set_controller(nixie_tube)
     controller.selected_signal = signal or false

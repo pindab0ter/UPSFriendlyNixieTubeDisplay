@@ -120,6 +120,30 @@ function helpers.remove_controller(unit_number)
     end
 end
 
+--- Find the controller of the chain that contains this Nixie Tube by walking east.
+--- @param unit_number uint?
+--- @return NixieTubeController?
+function helpers.find_chain_controller(unit_number)
+    while unit_number do
+        local controller = storage.controllers[unit_number]
+        if controller then
+            return controller
+        end
+
+        -- Find the display to the east, i.e. the one that feeds this one
+        --- @type uint?
+        local eastern_unit_number
+        for other_unit_number, other_display in pairs(storage.displays) do
+            if other_display.next_display == unit_number then
+                eastern_unit_number = other_unit_number
+                break
+            end
+        end
+
+        unit_number = eastern_unit_number
+    end
+end
+
 --- Invalidate all controller caches (total digits and last drawn value), so that every display
 --- recalculates on its next update even when the signal value is unchanged
 function helpers.invalidate_all_controller_caches()

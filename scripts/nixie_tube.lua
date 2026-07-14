@@ -13,51 +13,11 @@ local helpers = require("scripts.helpers")
 --- @class NixieTubeDisplay The aspect of a Nixie Tube responsible for displaying one or two digits
 --- @field entity LuaEntity
 --- @field arithmetic_combinators table<uint, LuaEntity>
---- @field control_behaviors table<uint, LuaAccumulatorControlBehavior>
+--- @field control_behaviors table<uint, LuaArithmeticCombinatorControlBehavior>
 --- @field next_display uint? The unit number of the Nixie Tube to the west (the next more significant digits)
 --- @field remaining_value string?
 
-storage = {
-    --- @type table<uint, NixieTubeController> The 'controllers' are the rightmost Nixie tubes in a series of Nixie
-    ---     tubes, which are responsible for updating the entire series
-    controllers = {},
-
-    --- @type table<uint, table<uint, NixieTubeController>> Controllers indexed per surface, so surfaces nobody is
-    ---     looking at can be skipped entirely
-    controllers_by_surface = {},
-
-    --- @type table<uint, uint> Per surface, the unit number of the last updated controller, so the sweep can continue
-    ---     where it left off when there are more controllers than the update budget
-    next_controller_by_surface = {},
-
-    --- @type table<uint, NixieTubeDisplay> The displays are the individual Nixie tubes in a series of Nixie tubes. A Nixie Tube can be a display and a controller at the same time
-    displays = {},
-
-    --- @type table<uint, NixieTubeGui>
-    gui = {},
-
-    --- @type number
-    controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value) or
-        error("nixie-tube-group-updates-per-tick not set"),
-
-    --- @type boolean
-    use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value --[[@as boolean]],
-
-    --- @type table<uint, boolean>
-    invalidated_this_tick = {}
-}
-
-local digit_counts = {
-    ['classic-nixie-tube'] = 1,
-    ['reinforced-nixie-tube'] = 1,
-    ['small-reinforced-nixie-tube'] = 2
-}
-
-local sprite_names = {
-    ['classic-nixie-tube-sprite'] = true,
-    ['reinforced-nixie-tube-sprite'] = true,
-    ['small-reinforced-nixie-tube-sprite'] = true,
-}
+local digit_counts = helpers.digit_counts
 
 local state_display = {
     ["-"] = "-",
@@ -121,7 +81,7 @@ local function set_arithmetic_combinators(display, values)
         local control_behavior = display.control_behaviors[key]
         if not (control_behavior and control_behavior.valid) then
             control_behavior = arithmetic_combinator.get_or_create_control_behavior() or
-                error('Failed to get control behavior') --[[@as LuaAccumulatorControlBehavior]]
+                error('Failed to get control behavior') --[[@as LuaArithmeticCombinatorControlBehavior]]
             display.control_behaviors[key] = control_behavior
         end
         local parameters = control_behavior.parameters
@@ -356,11 +316,7 @@ local function reconfigure_nixie_tubes()
 
     for _, surface in pairs(game.surfaces) do
         local arithmetic_combinators = surface.find_entities_filtered {
-            name = {
-                "classic-nixie-tube-sprite",
-                "reinforced-nixie-tube-sprite",
-                "small-reinforced-nixie-tube-sprite"
-            },
+            name = helpers.sprite_names,
         }
 
         for _, arithmetic_combinator in pairs(arithmetic_combinators) do
@@ -370,11 +326,7 @@ local function reconfigure_nixie_tubes()
         end
 
         local nixie_tubes = surface.find_entities_filtered {
-            name = {
-                "classic-nixie-tube",
-                "reinforced-nixie-tube",
-                "small-reinforced-nixie-tube"
-            }
+            name = helpers.entity_names,
         }
 
         for _, entity in pairs(nixie_tubes) do
@@ -396,16 +348,6 @@ commands.add_command(
         reconfigure_nixie_tubes()
     end
 )
-
-
--------------
--- Filters --
--------------
-
-
-local filters = {}
-filters[#filters + 1] = { filter = "name", name = "nixie_tube" }
-filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 
 
 --------------------
@@ -591,7 +533,7 @@ local function on_entity_cloned(event)
     end
 
     -- Cloning an area also clones the hidden digit sprites; the display will recreate its own
-    if sprite_names[destination.name] then
+    if helpers.is_nixie_tube_sprite(destination) then
         destination.destroy()
         return
     end
@@ -651,43 +593,20 @@ local function on_undo_redo_applied()
     end
 end
 
+--- Cache the runtime settings in storage
+local function read_settings()
+    storage.controller_updates_per_tick = settings.global["nixie-tube-group-updates-per-tick"].value --[[@as number]]
+    storage.use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value --[[@as boolean]]
+end
+
 --- @param event EventData.on_runtime_mod_setting_changed
 local function on_runtime_mod_setting_changed(event)
-    if event.setting == "nixie-tube-group-updates-per-tick" then
-        storage.controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value)
-    end
+    read_settings()
+
     if event.setting == "nixie-tube-enable-overflow-notation" then
-        storage.use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value
         helpers.invalidate_all_controller_caches()
     end
 end
-
-script.on_configuration_changed(function ()
-    storage.controller_updates_per_tick = tonumber(settings.global["nixie-tube-group-updates-per-tick"].value)
-    storage.use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value
-    reconfigure_nixie_tubes()
-end)
-
-script.on_init(function ()
-    storage.controllers = {}
-    storage.controllers_by_surface = {}
-    storage.next_controller_by_surface = {}
-    storage.displays = {}
-    storage.gui = {}
-
-    script.on_event(defines.events.on_tick, on_tick)
-    script.on_event(defines.events.on_script_trigger_effect, on_script_trigger_effect)
-    script.on_event(defines.events.on_runtime_mod_setting_changed, on_runtime_mod_setting_changed)
-    script.on_event(defines.events.on_gui_opened, nixie_tube_gui.on_gui_opened)
-
-    script.on_event(defines.events.on_entity_settings_pasted, on_entity_settings_pasted)
-    script.on_event(defines.events.on_blueprint_settings_pasted, on_blueprint_settings_pasted)
-    script.on_event(defines.events.on_undo_applied, on_undo_redo_applied)
-    script.on_event(defines.events.on_redo_applied, on_undo_redo_applied)
-
-    script.on_event(defines.events.on_object_destroyed, on_object_destroyed)
-    script.on_event(defines.events.on_entity_cloned, on_entity_cloned)
-end)
 
 nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
     local nixie_tube = self.entity
@@ -711,6 +630,36 @@ nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
 end
 
 local nixie_tube = {
+    on_init = function ()
+        --- @type table<uint, NixieTubeController> The rightmost Nixie Tubes of each series, responsible for updating it
+        storage.controllers = {}
+
+        --- @type table<uint, table<uint, NixieTubeController>> Controllers indexed per surface, so surfaces nobody
+        ---     is looking at can be skipped entirely
+        storage.controllers_by_surface = {}
+
+        --- @type table<uint, uint> Per surface, the unit number of the last updated controller, so the sweep can
+        ---     continue where it left off when there are more controllers than the update budget
+        storage.next_controller_by_surface = {}
+
+        --- @type table<uint, NixieTubeDisplay> The individual Nixie Tubes. A Nixie Tube can be both a display and
+        ---     a controller
+        storage.displays = {}
+
+        --- @type table<uint, NixieTubeGui>
+        storage.gui = {}
+
+        --- @type table<uint, boolean> Displays already invalidated this tick, to avoid redundant recursion
+        storage.invalidated_this_tick = {}
+
+        read_settings()
+    end,
+
+    on_configuration_changed = function ()
+        read_settings()
+        reconfigure_nixie_tubes()
+    end,
+
     events = {
         [defines.events.on_tick] = on_tick,
         [defines.events.on_script_trigger_effect] = on_script_trigger_effect,

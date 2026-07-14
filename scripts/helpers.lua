@@ -1,15 +1,39 @@
 local helpers = {}
 
-local entity_names_set = {
-    ['classic-nixie-tube'] = true,
-    ['reinforced-nixie-tube'] = true,
-    ['small-reinforced-nixie-tube'] = true
+--- Digit capacity per Nixie Tube entity name. The single source of truth for which entities are Nixie Tubes
+--- @type table<string, integer>
+helpers.digit_counts = {
+    ['classic-nixie-tube'] = 1,
+    ['reinforced-nixie-tube'] = 1,
+    ['small-reinforced-nixie-tube'] = 2,
 }
+
+--- @type string[] The names of all Nixie Tube entities
+helpers.entity_names = {}
+
+--- @type string[] The names of the hidden digit sprite entities
+helpers.sprite_names = {}
+
+local sprite_names_set = {}
+
+for name in pairs(helpers.digit_counts) do
+    helpers.entity_names[#helpers.entity_names + 1] = name
+
+    local sprite_name = name .. "-sprite"
+    helpers.sprite_names[#helpers.sprite_names + 1] = sprite_name
+    sprite_names_set[sprite_name] = true
+end
 
 --- @param entity LuaEntity
 --- @return boolean
 function helpers.is_nixie_tube(entity)
-    return entity_names_set[entity.name] == true
+    return helpers.digit_counts[entity.name] ~= nil
+end
+
+--- @param entity LuaEntity
+--- @return boolean
+function helpers.is_nixie_tube_sprite(entity)
+    return sprite_names_set[entity.name] == true
 end
 
 --- @param nixie_tube LuaEntity

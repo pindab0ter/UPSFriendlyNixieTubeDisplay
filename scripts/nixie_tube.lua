@@ -75,6 +75,9 @@ local function set_arithmetic_combinators(display, values)
                 error("Failed to create arithmetic combinator for Nixie Tube")
             end
 
+            -- Stray area damage would otherwise pop the digit while the Nixie Tube itself survives
+            arithmetic_combinator.destructible = false
+
             display.arithmetic_combinators[key] = arithmetic_combinator
         end
 
@@ -236,9 +239,6 @@ end
 --- @param nixie_tube LuaEntity
 --- @param invalidate_caches boolean?
 local function configure_nixie_tube(nixie_tube, invalidate_caches)
-    -- Set up the Nixie Tube and its display
-    nixie_tube.always_on = true
-
     local digit_count = digit_counts[nixie_tube.name]
 
     if not digit_count then
@@ -553,9 +553,6 @@ local function on_script_trigger_effect(event)
     if not nixie_tube then
         return
     end
-
-    -- Set up the Nixie Tube and its display
-    nixie_tube.always_on = true
 
     local control_behavior = nixie_tube.get_or_create_control_behavior() --[[@as LuaLampControlBehavior?]]
     if control_behavior then

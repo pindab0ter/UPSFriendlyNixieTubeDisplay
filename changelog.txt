@@ -7,6 +7,8 @@ Date: 2026-07-14
     - Digits are now only redrawn when the displayed value actually changes, significantly reducing script time for displays showing stable values
     - The selected signal is now cached instead of being re-read from the circuit condition every update
     - Nixie Tubes on surfaces nobody is looking at no longer consume the update budget
+  Changes:
+    - The hidden digit sprites no longer appear in Factoriopedia and can no longer be damaged
   Scripting:
     - Cleaned up lifecycle wiring and storage initialization
   Bugfixes:

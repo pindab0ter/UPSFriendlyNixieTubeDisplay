@@ -99,6 +99,7 @@ data:extend {
             direction_count = 1,
             shift = util.by_pixel(16, -13),
         },
+        always_on = true,
         energy_usage_per_tick = "4kW",
         energy_source = {
             type = "electric",
@@ -134,59 +135,5 @@ data:extend {
         open_sound = { filename = "__base__/sound/open-close/electric-small-open.ogg" },
         close_sound = { filename = "__base__/sound/open-close/electric-small-close.ogg" },
     },
-    {
-        type                           = "arithmetic-combinator",
-        name                           = "classic-nixie-tube-sprite",
-        icon                           = "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-icon.png",
-        icon_size                      = 32,
-        flags                          = {
-            "placeable-off-grid",
-            "not-repairable",
-            "not-on-map",
-            "not-deconstructable",
-            "not-blueprintable",
-            "hide-alt-info",
-            "not-flammable",
-            "not-selectable-in-game",
-            "not-in-kill-statistics",
-            "not-in-made-in",
-        },
-        minable                        = { hardness = 0.0, mining_time = 0.0, result = "classic-nixie-tube" },
-        max_health                     = 1,
-        order                          = "z[zebra]",
-
-        energy_source                  = {
-            type = "void",
-            usage_priority = "secondary-input",
-            render_no_network_icon = false,
-            render_no_power_icon = false
-        },
-        active_energy_usage            = "1W",
-
-        sprites                        = common.empty_sprites,
-        activity_led_sprites           = common.empty_sprites,
-        activity_led_light             = common.empty_light,
-        activity_led_light_offsets     = common.empty_offsets,
-        screen_light                   = common.empty_light,
-        screen_light_offsets           = common.empty_offsets,
-
-        minus_symbol_sprites           = build_sprite("-"),
-        multiply_symbol_sprites        = build_sprite("0"),
-        plus_symbol_sprites            = build_sprite("1"),
-        divide_symbol_sprites          = build_sprite("2"),
-        modulo_symbol_sprites          = build_sprite("3"),
-        power_symbol_sprites           = build_sprite("4"),
-        left_shift_symbol_sprites      = build_sprite("5"),
-        right_shift_symbol_sprites     = build_sprite("6"),
-        and_symbol_sprites             = build_sprite("7"),
-        or_symbol_sprites              = build_sprite("8"),
-        xor_symbol_sprites             = build_sprite("9"),
-
-        input_connection_bounding_box  = common.empty_bounding_box,
-        input_connection_points        = common.empty_wire_connection_points,
-        output_connection_bounding_box = common.empty_bounding_box,
-        output_connection_points       = common.empty_wire_connection_points,
-
-        circuit_wire_max_distance      = 0,
-    }
+    common.digit_sprite_entity("classic-nixie-tube", "__UPSFriendlyNixieTubeDisplay__/graphics/classic-nixie-tube-icon.png", build_sprite)
 }

@@ -3,12 +3,13 @@
   "runtime.version": "Lua 5.2",
   "workspace.checkThirdParty": "ApplyInMemory",
   "diagnostics.globals": [
+    "belt_connector_template",
+    "circuit_connector_definitions",
     "data",
+    "game",
     "mods",
     "settings",
     "table_size",
-    "belt_connector_template",
-    "circuit_connector_definitions",
     "universal_connector_template"
   ]
 }

@@ -6,6 +6,7 @@ Date: 2026-07-14
     - Opening any Nixie Tube in a row now opens the configuration of its rightmost tube
     - The GUI now shows the value the display is currently showing
     - The signal can now be configured on Nixie Tube ghosts
+    - Hovering any Nixie Tube in a row now shows the configured signal in its tooltip
   Gui:
     - The GUI title now names the Nixie Tube type and is localized, and closing plays a sound
   Translation:

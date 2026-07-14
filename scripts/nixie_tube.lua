@@ -132,6 +132,38 @@ local function display_characters(display, characters)
     end
 end
 
+--- Show the configured signal in the tooltip of every Nixie Tube in the chain. Only called when
+--- the signal or the chain structure changes
+--- @param controller NixieTubeController
+local function update_chain_tooltips(controller)
+    local signal = controller.selected_signal
+
+    --- @type RuntimeTooltipField?
+    local field
+    if signal then
+        local signal_type = signal.type or "item"
+        local rich_text_tag = signal_type == "virtual" and "virtual-signal" or signal_type
+        local value = signal.quality
+            and ("[%s=%s,quality=%s]"):format(rich_text_tag, signal.name, signal.quality)
+            or ("[%s=%s]"):format(rich_text_tag, signal.name)
+
+        field = { name = { "gui.nixie-tube-signal" }, value = value }
+    end
+
+    local display = storage.displays[controller.entity.unit_number]
+    while display do
+        local entity = display.entity
+        if entity.valid then
+            entity.clear_tooltip_fields()
+            if field then
+                entity.set_tooltip_field(field)
+            end
+        end
+
+        display = display.next_display and storage.displays[display.next_display]
+    end
+end
+
 --- Cache the signal from the lamp's circuit condition, so it doesn't have to be read every update
 --- @param controller NixieTubeController
 local function refresh_selected_signal(controller)
@@ -139,6 +171,7 @@ local function refresh_selected_signal(controller)
     local circuit_condition = control_behavior and control_behavior.circuit_condition
     controller.selected_signal = circuit_condition and circuit_condition.first_signal or false
     controller.previous_value = nil
+    update_chain_tooltips(controller)
 end
 
 --- @param controller NixieTubeController
@@ -302,6 +335,14 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
 
     -- Invalidate controller caches since the chain structure may have changed
     helpers.invalidate_all_controller_caches()
+
+    -- A tube that joins a chain needs its tooltip even when the chain's signal did not change
+    if invalidate_caches ~= false then
+        local controller = helpers.find_chain_controller(nixie_tube.unit_number)
+        if controller then
+            update_chain_tooltips(controller)
+        end
+    end
 end
 
 --- Clears the storage, removes all Nixie Tubes and arithmetic combinators, and adds them back in
@@ -631,6 +672,7 @@ nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
     local controller = helpers.storage_set_controller(nixie_tube)
     controller.selected_signal = signal or false
     controller.previous_value = nil
+    update_chain_tooltips(controller)
 
     update_controller(controller)
 end

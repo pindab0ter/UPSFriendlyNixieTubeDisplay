@@ -4,8 +4,8 @@ local helpers = require("scripts.helpers")
 --- @class NixieTubeController The aspect of a Nixie Tube responsible for controlling a series of Nixie Tubes. Always
 ---   the most eastern Nixie Tube (least significant digit) in a series of Nixie Tubes
 --- @field entity LuaEntity
---- @field control_behavior LuaLampControlBehavior?
---- @field previous_signal SignalID?
+--- @field selected_signal SignalID|false|nil Cached signal from the lamp's circuit condition. nil means unknown
+---   (re-read on the next update), false means no signal is selected
 --- @field previous_value int?
 --- @field total_digits int? Cached total digit count for the display chain (for overflow detection)
 
@@ -158,18 +158,13 @@ local function display_characters(display, characters)
     end
 end
 
---- Compare signals by value, as the API returns a fresh table on every read
---- @param a SignalID?
---- @param b SignalID?
---- @return boolean
-local function is_same_signal(a, b)
-    if a == nil or b == nil then
-        return a == b
-    end
-
-    return a.name == b.name
-        and (a.type or "item") == (b.type or "item")
-        and (a.quality or "normal") == (b.quality or "normal")
+--- Cache the signal from the lamp's circuit condition, so it doesn't have to be read every update
+--- @param controller NixieTubeController
+local function refresh_selected_signal(controller)
+    local control_behavior = controller.entity.get_control_behavior() --[[@as LuaLampControlBehavior?]]
+    local circuit_condition = control_behavior and control_behavior.circuit_condition
+    controller.selected_signal = circuit_condition and circuit_condition.first_signal or false
+    controller.previous_value = nil
 end
 
 --- @param controller NixieTubeController
@@ -183,20 +178,10 @@ local function update_controller(controller)
         return
     end
 
-    local control_behavior = controller.control_behavior
-    if not (control_behavior and control_behavior.valid) then
-        control_behavior = controller.entity.get_or_create_control_behavior() or
-            error('Failed to get control behavior') --[[@as LuaLampControlBehavior]]
-        controller.control_behavior = control_behavior
-    end
-
-    local selected_signal = control_behavior
-        .circuit_condition --[[@as CircuitCondition]]
-        .first_signal
-
-    if not is_same_signal(controller.previous_signal, selected_signal) then
-        controller.previous_signal = selected_signal
-        controller.previous_value = nil
+    local selected_signal = controller.selected_signal
+    if selected_signal == nil then
+        refresh_selected_signal(controller)
+        selected_signal = controller.selected_signal
     end
 
     local has_enough_energy = display.entity.energy > 0
@@ -540,6 +525,34 @@ local function on_script_trigger_effect(event)
     configure_nixie_tube(nixie_tube)
 end
 
+--- Invalidate the cached signal of a Nixie Tube controller so it is re-read on its next update
+--- @param entity LuaEntity
+local function invalidate_selected_signal(entity)
+    local controller = storage.controllers[entity.unit_number]
+    if controller then
+        controller.selected_signal = nil
+        controller.previous_value = nil
+    end
+end
+
+--- @param event EventData.on_entity_settings_pasted
+local function on_entity_settings_pasted(event)
+    invalidate_selected_signal(event.destination)
+end
+
+--- @param event EventData.on_blueprint_settings_pasted
+local function on_blueprint_settings_pasted(event)
+    invalidate_selected_signal(event.entity)
+end
+
+--- Undo and redo can revert circuit conditions without raising further events, so invalidate all cached signals
+local function on_undo_redo_applied()
+    for _, controller in pairs(storage.controllers) do
+        controller.selected_signal = nil
+        controller.previous_value = nil
+    end
+end
+
 --- @param event EventData.on_runtime_mod_setting_changed
 local function on_runtime_mod_setting_changed(event)
     if event.setting == "nixie-tube-group-updates-per-tick" then
@@ -567,6 +580,11 @@ script.on_init(function ()
     script.on_event(defines.events.on_runtime_mod_setting_changed, on_runtime_mod_setting_changed)
     script.on_event(defines.events.on_gui_opened, nixie_tube_gui.on_gui_opened)
 
+    script.on_event(defines.events.on_entity_settings_pasted, on_entity_settings_pasted)
+    script.on_event(defines.events.on_blueprint_settings_pasted, on_blueprint_settings_pasted)
+    script.on_event(defines.events.on_undo_applied, on_undo_redo_applied)
+    script.on_event(defines.events.on_redo_applied, on_undo_redo_applied)
+
     script.on_event(defines.events.on_entity_died, on_object_destroyed)
     script.on_event(defines.events.on_player_mined_entity, on_object_destroyed)
     script.on_event(defines.events.on_robot_mined_entity, on_object_destroyed)
@@ -589,6 +607,8 @@ nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
     }
 
     local controller = helpers.storage_set_controller(nixie_tube)
+    controller.selected_signal = signal or false
+    controller.previous_value = nil
 
     update_controller(controller)
 end
@@ -599,6 +619,11 @@ local nixie_tube = {
         [defines.events.on_script_trigger_effect] = on_script_trigger_effect,
         [defines.events.on_runtime_mod_setting_changed] = on_runtime_mod_setting_changed,
         [defines.events.on_gui_opened] = nixie_tube_gui.on_gui_opened,
+
+        [defines.events.on_entity_settings_pasted] = on_entity_settings_pasted,
+        [defines.events.on_blueprint_settings_pasted] = on_blueprint_settings_pasted,
+        [defines.events.on_undo_applied] = on_undo_redo_applied,
+        [defines.events.on_redo_applied] = on_undo_redo_applied,
 
         [defines.events.on_entity_died] = on_object_destroyed,
         [defines.events.on_player_mined_entity] = on_object_destroyed,

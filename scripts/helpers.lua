@@ -44,8 +44,7 @@ function helpers.storage_set_controller(nixie_tube, data)
     if not controller then
         controller = {
             entity = nixie_tube,
-            control_behavior = nil,
-            previous_signal = nil,
+            selected_signal = nil,
             previous_value = nil
         }
         storage.controllers[nixie_tube.unit_number] = controller

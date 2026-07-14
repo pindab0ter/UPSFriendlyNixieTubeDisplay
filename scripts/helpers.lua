@@ -57,10 +57,12 @@ function helpers.storage_set_controller(nixie_tube, data)
     return controller
 end
 
---- Invalidate all controller caches (total_digits)
+--- Invalidate all controller caches (total digits and last drawn value), so that every display
+--- recalculates on its next update even when the signal value is unchanged
 function helpers.invalidate_all_controller_caches()
     for _, controller in pairs(storage.controllers) do
         controller.total_digits = nil
+        controller.previous_value = nil
     end
 end
 

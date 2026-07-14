@@ -602,6 +602,7 @@ local function on_runtime_mod_setting_changed(event)
     end
     if event.setting == "nixie-tube-enable-overflow-notation" then
         storage.use_overflow_notation = settings.global["nixie-tube-enable-overflow-notation"].value
+        helpers.invalidate_all_controller_caches()
     end
 end
 

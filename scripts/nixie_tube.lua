@@ -158,6 +158,20 @@ local function display_characters(display, characters)
     end
 end
 
+--- Compare signals by value, as the API returns a fresh table on every read
+--- @param a SignalID?
+--- @param b SignalID?
+--- @return boolean
+local function is_same_signal(a, b)
+    if a == nil or b == nil then
+        return a == b
+    end
+
+    return a.name == b.name
+        and (a.type or "item") == (b.type or "item")
+        and (a.quality or "normal") == (b.quality or "normal")
+end
+
 --- @param controller NixieTubeController
 local function update_controller(controller)
     if not controller.entity.valid then
@@ -170,16 +184,17 @@ local function update_controller(controller)
     end
 
     local control_behavior = controller.control_behavior
-    if not control_behavior then
+    if not (control_behavior and control_behavior.valid) then
         control_behavior = controller.entity.get_or_create_control_behavior() or
             error('Failed to get control behavior') --[[@as LuaLampControlBehavior]]
+        controller.control_behavior = control_behavior
     end
 
     local selected_signal = control_behavior
         .circuit_condition --[[@as CircuitCondition]]
         .first_signal
 
-    if controller.previous_signal ~= selected_signal then
+    if not is_same_signal(controller.previous_signal, selected_signal) then
         controller.previous_signal = selected_signal
         controller.previous_value = nil
     end
@@ -187,6 +202,8 @@ local function update_controller(controller)
     local has_enough_energy = display.entity.energy > 0
 
     if not selected_signal or not has_enough_energy then
+        -- Forget the last value so the display is redrawn when it comes back on
+        controller.previous_value = nil
         display_characters(display, "off")
         return
     end

@@ -16,7 +16,7 @@ common.sprite_positions = {
     ["-"] = 11,
 }
 
----@type data.Vector
+---@type Vector
 common.empty_vector = { x = 0, y = 0 }
 
 common.empty_bounding_box = {
@@ -31,7 +31,7 @@ common.empty_offsets = {
     common.empty_vector,
 }
 
----@type data.Sprite
+---@type Sprite
 common.empty_sprite = {
     filename = "__UPSFriendlyNixieTubeDisplay__/graphics/empty.png",
     width = 1,
@@ -40,7 +40,7 @@ common.empty_sprite = {
     shift = common.empty_vector,
 }
 
----@type data.Sprite4Way
+---@type Sprite4Way
 common.empty_sprites = {
     north = common.empty_sprite,
     east = common.empty_sprite,
@@ -48,20 +48,20 @@ common.empty_sprites = {
     west = common.empty_sprite,
 }
 
----@type data.LightDefinition
+---@type LightDefinition
 common.empty_light = {
     intensity = 0,
     size = 0,
 }
 
----@type data.WirePosition
+---@type WirePosition
 common.empty_wire_position = {
     copper = common.empty_vector,
     red = common.empty_vector,
     green = common.empty_vector,
 }
 
----@type data.WireConnectionPoint
+---@type WireConnectionPoint
 common.empty_wire_connection_point = {
     wire = common.empty_wire_position,
     shadow = common.empty_wire_position,
@@ -78,8 +78,8 @@ common.empty_wire_connection_points = {
 --- Setting the combinator's operation selects which digit sprite the engine draws
 --- @param name string The Nixie Tube entity name
 --- @param icon string
---- @param build_sprite fun(character: string): data.Sprite4Way
---- @return data.ArithmeticCombinatorPrototype
+--- @param build_sprite fun(character: string): Sprite4Way
+--- @return ArithmeticCombinatorPrototype
 function common.digit_sprite_entity(name, icon, build_sprite)
     return {
         type                           = "arithmetic-combinator",

@@ -1,7 +1,7 @@
 require("util")
 local common = require("common")
 
-circuit_connector_definitions["small-reinforced-nixie-tube"] = circuit_connector_definitions.create_single(
+local connector_definition = circuit_connector_definitions.create_single(
     belt_connector_template,
     {
         variation = 1,
@@ -9,7 +9,7 @@ circuit_connector_definitions["small-reinforced-nixie-tube"] = circuit_connector
         shadow_offset = util.by_pixel(19, -8),
         show_shadow = true,
     }
-)
+) --[[@as { sprites: table, points: table }]]
 
 local function build_sprite(character)
     local orientation = {
@@ -79,10 +79,12 @@ data:extend {
         resistances = {
             {
                 type = "fire",
+                decrease = 0,
                 percent = 100
             },
             {
                 type = "physical",
+                decrease = 0,
                 percent = 50
             },
         },
@@ -111,7 +113,7 @@ data:extend {
         },
         light = common.empty_light,
         circuit_connector = {
-            sprites = circuit_connector_definitions["small-reinforced-nixie-tube"].sprites,
+            sprites = connector_definition.sprites,
             points = {
                 wire = {
                     green = util.by_pixel(13.5, -19),

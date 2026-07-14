@@ -48,6 +48,12 @@ local digit_counts = {
     ['small-reinforced-nixie-tube'] = 2
 }
 
+local sprite_names = {
+    ['classic-nixie-tube-sprite'] = true,
+    ['reinforced-nixie-tube-sprite'] = true,
+    ['small-reinforced-nixie-tube-sprite'] = true,
+}
+
 local state_display = {
     ["-"] = "-",
     ["0"] = "*",
@@ -269,6 +275,9 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
         return
     end
 
+    -- So that on_object_destroyed is raised however the Nixie Tube is removed
+    script.register_on_object_destroyed(nixie_tube)
+
     helpers.storage_set_display(nixie_tube)
 
     -- Process the Nixie Tube to the west, if there is one
@@ -397,6 +406,60 @@ filters[#filters + 1] = { filter = "ghost_name", name = "nixie_tube" }
 --------------------
 
 
+--- Destroy all arithmetic combinators associated with the Nixie Tube
+--- @param unit_number uint
+local function destroy_arithmetic_combinators(unit_number)
+    local display = storage.displays[unit_number]
+    if display == nil then
+        return
+    end
+
+    for key, arithmetic_combinator in pairs(display.arithmetic_combinators) do
+        if arithmetic_combinator.valid then
+            arithmetic_combinator.destroy()
+        end
+        display.arithmetic_combinators[key] = nil
+    end
+end
+
+--- Clean up after a Nixie Tube was removed by any means (mined, died, script, surface deletion)
+--- @param unit_number uint?
+local function clean_up_nixie_tube(unit_number)
+    if not unit_number then
+        return
+    end
+
+    local display = storage.displays[unit_number]
+    if not display and not storage.controllers[unit_number] then
+        return
+    end
+
+    nixie_tube_gui.destroy_guis_for_entity()
+
+    destroy_arithmetic_combinators(unit_number)
+
+    -- Promote the next display (to the west) to a controller if there is one
+    if display and display.next_display then
+        local next_display = storage.displays[display.next_display]
+
+        if next_display and next_display.entity.valid then
+            local controller = helpers.storage_set_controller(next_display.entity)
+            storage.next_controller_unit_number = controller.entity.unit_number
+            update_controller(controller)
+        else
+            storage.next_controller_unit_number = nil
+        end
+    else
+        storage.next_controller_unit_number = nil
+    end
+
+    storage.displays[unit_number] = nil
+    storage.controllers[unit_number] = nil
+
+    -- Invalidate controller caches since the chain structure has changed
+    helpers.invalidate_all_controller_caches()
+end
+
 --- @param _ EventData.on_tick
 local function on_tick(_)
     storage.invalidated_this_tick = {}
@@ -439,7 +502,9 @@ local function on_tick(_)
         end
 
         if not controller.entity.valid then
-            reconfigure_nixie_tubes()
+            -- Destroyed, but on_object_destroyed has not fired yet (it can arrive a tick later),
+            -- or the save predates destruction registration
+            clean_up_nixie_tube(storage.next_controller_unit_number)
             break
         end
 
@@ -452,55 +517,32 @@ local function on_tick(_)
     end
 end
 
---- Destroy all arithmetic combinators associated with the Nixie Tube
---- @param nixie_tube LuaEntity
-local function destroy_arithmetic_combinators(nixie_tube)
-    local display = storage.displays[nixie_tube.unit_number]
-    if display == nil then
+--- @param event EventData.on_object_destroyed
+local function on_object_destroyed(event)
+    if event.type ~= defines.target_type.entity then
         return
     end
 
-    for key, arithmetic_combinator in pairs(display.arithmetic_combinators) do
-        if arithmetic_combinator.valid then
-            arithmetic_combinator.destroy()
-        end
-        display.arithmetic_combinators[key] = nil
-    end
+    -- For entities, the useful_id is the unit number
+    clean_up_nixie_tube(event.useful_id)
 end
 
---- @param event EventData.on_entity_died|EventData.on_player_mined_entity|EventData.on_robot_mined_entity|EventData.script_raised_destroy
-local function on_object_destroyed(event)
-    local entity = event.entity
-    if not entity or not entity.valid or not helpers.is_nixie_tube(entity) then
+--- @param event EventData.on_entity_cloned
+local function on_entity_cloned(event)
+    local destination = event.destination
+    if not (destination and destination.valid) then
         return
     end
 
-    nixie_tube_gui.destroy_guis_for_entity(entity)
-
-    destroy_arithmetic_combinators(entity)
-
-    -- Promote the next display (to the west) to a controller if there is one
-    local display = storage.displays[entity.unit_number]
-
-    if display and display.next_display then
-        local next_display = storage.displays[display.next_display]
-
-        if next_display then
-            local controller = helpers.storage_set_controller(next_display.entity)
-            storage.next_controller_unit_number = controller.entity.unit_number
-            update_controller(controller)
-        else
-            storage.next_controller_unit_number = nil
-        end
-    else
-        storage.next_controller_unit_number = nil
+    -- Cloning an area also clones the hidden digit sprites; the display will recreate its own
+    if sprite_names[destination.name] then
+        destination.destroy()
+        return
     end
 
-    storage.displays[entity.unit_number] = nil
-    storage.controllers[entity.unit_number] = nil
-
-    -- Invalidate controller caches since the chain structure has changed
-    helpers.invalidate_all_controller_caches()
+    if helpers.is_nixie_tube(destination) then
+        configure_nixie_tube(destination)
+    end
 end
 
 --- @param event EventData.on_script_trigger_effect
@@ -585,11 +627,8 @@ script.on_init(function ()
     script.on_event(defines.events.on_undo_applied, on_undo_redo_applied)
     script.on_event(defines.events.on_redo_applied, on_undo_redo_applied)
 
-    script.on_event(defines.events.on_entity_died, on_object_destroyed)
-    script.on_event(defines.events.on_player_mined_entity, on_object_destroyed)
-    script.on_event(defines.events.on_robot_mined_entity, on_object_destroyed)
-	script.on_event(defines.events.on_space_platform_mined_entity, on_object_destroyed)
-    script.on_event(defines.events.script_raised_destroy, on_object_destroyed)
+    script.on_event(defines.events.on_object_destroyed, on_object_destroyed)
+    script.on_event(defines.events.on_entity_cloned, on_entity_cloned)
 end)
 
 nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
@@ -625,11 +664,8 @@ local nixie_tube = {
         [defines.events.on_undo_applied] = on_undo_redo_applied,
         [defines.events.on_redo_applied] = on_undo_redo_applied,
 
-        [defines.events.on_entity_died] = on_object_destroyed,
-        [defines.events.on_player_mined_entity] = on_object_destroyed,
-        [defines.events.on_robot_mined_entity] = on_object_destroyed,
-        [defines.events.on_space_platform_mined_entity] = on_object_destroyed,
-        [defines.events.script_raised_destroy] = on_object_destroyed,
+        [defines.events.on_object_destroyed] = on_object_destroyed,
+        [defines.events.on_entity_cloned] = on_entity_cloned,
     }
 }
 

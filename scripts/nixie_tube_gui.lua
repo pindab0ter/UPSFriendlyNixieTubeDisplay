@@ -37,8 +37,8 @@ function nixie_tube_gui.destroy_all_guis()
     end
 end
 
---- Destroy the GUIs that are showing this entity
---- @param entity LuaEntity
+--- Destroy the GUIs that are showing this entity, or any GUI whose entity is gone when no entity is given
+--- @param entity LuaEntity?
 function nixie_tube_gui.destroy_guis_for_entity(entity)
     for player_index, player_gui in pairs(storage.gui) do
         if not player_gui.entity.valid or player_gui.entity == entity then

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "Lua 5.2",
+  "workspace.checkThirdParty": "ApplyInMemory",
+  "diagnostics.globals": [
+    "data",
+    "mods",
+    "settings",
+    "table_size",
+    "belt_connector_template",
+    "circuit_connector_definitions",
+    "universal_connector_template"
+  ]
+}

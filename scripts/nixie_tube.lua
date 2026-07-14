@@ -331,10 +331,11 @@ end
 
 --- Clears the storage, removes all Nixie Tubes and arithmetic combinators, and adds them back in
 local function reconfigure_nixie_tubes()
+    nixie_tube_gui.destroy_all_guis()
+
     storage.controllers = {}
     storage.next_controller_unit_number = nil
     storage.displays = {}
-    storage.gui = {}
     storage.invalidated_this_tick = {}
 
     for _, surface in pairs(game.surfaces) do
@@ -376,7 +377,6 @@ commands.add_command(
     "reconfigure-nixie-tubes",
     "Reconfigure all Nixie Tubes",
     function ()
-        game.player.opened = nil
         reconfigure_nixie_tubes()
     end
 )
@@ -475,7 +475,7 @@ local function on_object_destroyed(event)
         return
     end
 
-    nixie_tube_gui.destroy_all_guis()
+    nixie_tube_gui.destroy_guis_for_entity(entity)
 
     destroy_arithmetic_combinators(entity)
 

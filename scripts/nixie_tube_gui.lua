@@ -9,9 +9,6 @@ nixie_tube_gui.callbacks = {
 
 --- @param player_index uint
 function nixie_tube_gui.destroy_gui(player_index)
-    local player = game.get_player(player_index)
-    player.opened = nil
-
     local self = storage.gui[player_index]
     if not self then
         return
@@ -19,20 +16,34 @@ function nixie_tube_gui.destroy_gui(player_index)
 
     storage.gui[player_index] = nil
 
+    -- Destroying the window also clears player.opened if it was open
     local window = self.elements.nt_nixie_tube_window
-    if not window.valid then
-        return
+    if window and window.valid then
+        window.destroy()
     end
-
-    window.destroy()
 end
 
+--- Destroy all Nixie Tube GUIs, including windows that are no longer tracked in storage
 function nixie_tube_gui.destroy_all_guis()
-    if not next(storage.gui) then
-        return
-    end
     for player_index, _ in pairs(storage.gui) do
         nixie_tube_gui.destroy_gui(player_index)
+    end
+
+    for _, player in pairs(game.players) do
+        local window = player.gui.screen.nt_nixie_tube_window
+        if window then
+            window.destroy()
+        end
+    end
+end
+
+--- Destroy the GUIs that are showing this entity
+--- @param entity LuaEntity
+function nixie_tube_gui.destroy_guis_for_entity(entity)
+    for player_index, player_gui in pairs(storage.gui) do
+        if not player_gui.entity.valid or player_gui.entity == entity then
+            nixie_tube_gui.destroy_gui(player_index)
+        end
     end
 end
 
@@ -51,9 +62,9 @@ end
 
 --- @param entity LuaEntity
 function nixie_tube_gui.update_guis_for_entity(entity)
-    for _, gui in pairs(storage.gui) do
-        if not gui.entity.valid or gui.entity == entity then
-            nixie_tube_gui.update_gui(gui, entity)
+    for _, player_gui in pairs(storage.gui) do
+        if not player_gui.entity.valid or player_gui.entity == entity then
+            nixie_tube_gui.update_gui(player_gui, entity)
         end
     end
 end

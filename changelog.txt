@@ -6,6 +6,10 @@ Date: 2026-07-14
   Optimizations:
     - Digits are now only redrawn when the displayed value actually changes, significantly reducing script time for displays showing stable values
     - The selected signal is now cached instead of being re-read from the circuit condition every update
+  Bugfixes:
+    - Fixed that destroying any Nixie Tube closed every player's open Nixie Tube GUI
+    - Fixed GUI windows getting stuck on screen after a mod update or /reconfigure-nixie-tubes
+    - Fixed a crash when running /reconfigure-nixie-tubes from the server console
 ---------------------------------------------------------------------------------------------------
 Version: 0.3.2
 Date: 2026-05-19

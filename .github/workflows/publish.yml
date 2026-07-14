@@ -35,6 +35,8 @@ jobs:
         uses: TheBrutalX/factorio-mod-uploader-action@v2
         with:
           action: compress
+          # Work around https://github.com/TheBrutalX/Factorio-mod-uploader-action/issues/69
+          auto-update-version: "false"
 
       - name: Upload mod
         if: steps.check.outputs.bumped == 'true'

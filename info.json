@@ -1,15 +1,15 @@
 {
   "name": "UPSFriendlyNixieTubeDisplay",
-  "version": "0.3.2",
-  "factorio_version": "2.0",
+  "version": "0.4.0",
+  "factorio_version": "2.1",
   "title": "UPS Friendly Nixie Tubes",
   "author": "Red_Wizard, pindab0ter",
   "contact": "",
   "homepage": "https://github.com/pindab0ter/UPSFriendlyNixieTubeDisplay",
   "description": "A UPS friendly Nixie Tube mod.",
   "dependencies": [
-    "base >= 2.0.0",
-    "flib >= 0.15.0",
+    "base >= 2.1.0",
+    "flib >= 0.17.0",
     "! SantasNixieTubeDisplay",
     "! nixie-tubes"
   ]

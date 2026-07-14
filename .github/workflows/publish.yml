@@ -11,6 +11,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Check version bumped
+        id: check
+        run: |
+          NEW=$(jq -r .version info.json)
+          OLD=$(git show HEAD~1:info.json 2>/dev/null | jq -r .version || echo "")
+          if [ "$NEW" = "$OLD" ]; then
+            echo "Version unchanged ($NEW); skipping upload."
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "bumped=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Validate mod
         uses: TheBrutalX/factorio-mod-uploader-action@v2
@@ -23,6 +37,7 @@ jobs:
           action: compress
 
       - name: Upload mod
+        if: steps.check.outputs.bumped == 'true'
         uses: TheBrutalX/factorio-mod-uploader-action@v2
         with:
           action: upload

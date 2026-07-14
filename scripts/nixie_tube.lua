@@ -4,6 +4,7 @@ local helpers = require("scripts.helpers")
 --- @class NixieTubeController The aspect of a Nixie Tube responsible for controlling a series of Nixie Tubes. Always
 ---   the most eastern Nixie Tube (least significant digit) in a series of Nixie Tubes
 --- @field entity LuaEntity
+--- @field surface_index uint Cached so the per-surface index can be cleaned up after the entity is gone
 --- @field selected_signal SignalID|false|nil Cached signal from the lamp's circuit condition. nil means unknown
 ---   (re-read on the next update), false means no signal is selected
 --- @field previous_value int?
@@ -13,7 +14,7 @@ local helpers = require("scripts.helpers")
 --- @field entity LuaEntity
 --- @field arithmetic_combinators table<uint, LuaEntity>
 --- @field control_behaviors table<uint, LuaAccumulatorControlBehavior>
---- @field next_display uint?
+--- @field next_display uint? The unit number of the Nixie Tube to the west (the next more significant digits)
 --- @field remaining_value string?
 
 storage = {
@@ -21,9 +22,13 @@ storage = {
     ---     tubes, which are responsible for updating the entire series
     controllers = {},
 
-    --- @type uint? The unit number of the next controller, so we can continue iterating where we left off if the amount
-    ---     of controllers is larger than the update speed
-    next_controller_unit_number = nil,
+    --- @type table<uint, table<uint, NixieTubeController>> Controllers indexed per surface, so surfaces nobody is
+    ---     looking at can be skipped entirely
+    controllers_by_surface = {},
+
+    --- @type table<uint, uint> Per surface, the unit number of the last updated controller, so the sweep can continue
+    ---     where it left off when there are more controllers than the update budget
+    next_controller_by_surface = {},
 
     --- @type table<uint, NixieTubeDisplay> The displays are the individual Nixie tubes in a series of Nixie tubes. A Nixie Tube can be a display and a controller at the same time
     displays = {},
@@ -293,23 +298,19 @@ local function configure_nixie_tube(nixie_tube, invalidate_caches)
 
     for _, neighbor in pairs(western_neighbors) do
         if neighbor.valid then
-            if storage.next_controller_unit_number == neighbor.unit_number then
-                -- If it's currently the next controller, clear it
-                storage.next_controller_unit_number = nil
-            end
-
             local neighbor_control_behavior = neighbor.get_control_behavior() --[[@as LuaLampControlBehavior?]]
             if neighbor_control_behavior then
                 neighbor_control_behavior.circuit_condition = nil
             end
 
-            storage.controllers[neighbor.unit_number] = nil
-            local neighbor_display = helpers.storage_set_display(nixie_tube, {
+            helpers.remove_controller(neighbor.unit_number)
+
+            local own_display = helpers.storage_set_display(nixie_tube, {
                 next_display = neighbor.unit_number
             })
 
             if invalidate_caches ~= false then
-                invalidate_cache(neighbor_display, "west")
+                invalidate_cache(own_display, "west")
             end
         end
     end
@@ -348,7 +349,8 @@ local function reconfigure_nixie_tubes()
     nixie_tube_gui.destroy_all_guis()
 
     storage.controllers = {}
-    storage.next_controller_unit_number = nil
+    storage.controllers_by_surface = {}
+    storage.next_controller_by_surface = {}
     storage.displays = {}
     storage.invalidated_this_tick = {}
 
@@ -449,20 +451,88 @@ local function clean_up_nixie_tube(unit_number)
 
         if next_display and next_display.entity.valid then
             local controller = helpers.storage_set_controller(next_display.entity)
-            storage.next_controller_unit_number = controller.entity.unit_number
             update_controller(controller)
-        else
-            storage.next_controller_unit_number = nil
         end
-    else
-        storage.next_controller_unit_number = nil
     end
 
     storage.displays[unit_number] = nil
-    storage.controllers[unit_number] = nil
+    helpers.remove_controller(unit_number)
 
     -- Invalidate controller caches since the chain structure has changed
     helpers.invalidate_all_controller_caches()
+end
+
+--- Rebuild the per-surface controller index, for saves from before it existed
+local function rebuild_indexes()
+    storage.controllers_by_surface = {}
+    storage.next_controller_by_surface = {}
+
+    local invalid_controllers = {}
+    for unit_number, controller in pairs(storage.controllers) do
+        if controller.entity.valid then
+            controller.surface_index = controller.entity.surface_index
+
+            local surface_controllers = storage.controllers_by_surface[controller.surface_index]
+            if not surface_controllers then
+                surface_controllers = {}
+                storage.controllers_by_surface[controller.surface_index] = surface_controllers
+            end
+            surface_controllers[unit_number] = controller
+        else
+            invalid_controllers[#invalid_controllers + 1] = unit_number
+        end
+    end
+
+    for _, unit_number in pairs(invalid_controllers) do
+        clean_up_nixie_tube(unit_number)
+    end
+end
+
+--- Update up to `budget` controllers on this surface, continuing where the previous sweep stopped
+--- @param surface_index uint
+--- @param budget number
+local function update_controllers_on_surface(surface_index, budget)
+    local surface_controllers = storage.controllers_by_surface[surface_index]
+    if not surface_controllers then
+        return
+    end
+
+    local pointer = storage.next_controller_by_surface[surface_index]
+    --- @type uint? The first controller visited in this sweep, to stop after one full cycle
+    local first_visited
+    local used = 0
+
+    while used < budget do
+        local key, controller = next(surface_controllers, pointer)
+
+        -- Wrap around to the start if we've reached the end
+        if key == nil then
+            key, controller = next(surface_controllers)
+        end
+
+        if key == nil or key == first_visited then
+            break
+        end
+        --- @cast controller NixieTubeController
+
+        if first_visited == nil then
+            first_visited = key
+        end
+        pointer = key
+
+        if not controller.entity.valid then
+            -- Destroyed, but on_object_destroyed has not fired yet (it can arrive a tick later),
+            -- or the save predates destruction registration. Resume on the next tick
+            storage.next_controller_by_surface[surface_index] = nil
+            clean_up_nixie_tube(key)
+            return
+        end
+
+        update_controller(controller)
+        used = used + 1
+    end
+
+    storage.next_controller_by_surface[surface_index] = pointer
 end
 
 --- @param _ EventData.on_tick
@@ -474,51 +544,32 @@ local function on_tick(_)
         return
     end
 
-    local first_unit_number_this_tick = storage.next_controller_unit_number
+    if not storage.controllers_by_surface then
+        rebuild_indexes()
+    end
 
-    -- Determine which surfaces have players that can see the Nixie Tubes
-    local eyes_on_surface = {}
-    for i = 1, #game.connected_players do
-        local player = game.connected_players[i]
+    -- Determine which surfaces are being watched. player.surface_index follows the remote view, so looking
+    -- at another surface through the zoomed-in map counts as watching it
+    local watched_surfaces = {}
+    local watched_count = 0
+    for _, player in pairs(game.connected_players) do
         if player.render_mode == defines.render_mode.game or player.render_mode == defines.render_mode.chart_zoomed_in then
-            eyes_on_surface[player.surface_index] = (eyes_on_surface[player.surface_index] or 0) + 1
+            local surface_index = player.surface_index
+            if not watched_surfaces[surface_index] and storage.controllers_by_surface[surface_index] then
+                watched_surfaces[surface_index] = true
+                watched_count = watched_count + 1
+            end
         end
     end
 
-    --- @type NixieTubeController?
-    local controller
-    local i = 1
+    if watched_count == 0 then
+        return
+    end
 
-    while i <= storage.controller_updates_per_tick do
-        -- If we've looped back to the first controller which was processed this tick, stop
-        if storage.next_controller_unit_number ~= nil and storage.next_controller_unit_number == first_unit_number_this_tick and i ~= 1 then
-            break
-        end
-
-        storage.next_controller_unit_number, controller = next(storage.controllers, storage.next_controller_unit_number)
-
-        -- Wrap around to the start if we've reached the end
-        if controller == nil then
-            storage.next_controller_unit_number, controller = next(storage.controllers)
-        end
-
-        if not controller then
-            break
-        end
-
-        if not controller.entity.valid then
-            -- Destroyed, but on_object_destroyed has not fired yet (it can arrive a tick later),
-            -- or the save predates destruction registration
-            clean_up_nixie_tube(storage.next_controller_unit_number)
-            break
-        end
-
-        -- If no player is able to see Nixie Tubes on this surface, skip the update
-        if eyes_on_surface[controller.entity.surface_index] then
-            update_controller(controller)
-        end
-
-        i = i + 1
+    -- Split the update budget between watched surfaces, so displays on one cannot starve the others
+    local budget = math.ceil(storage.controller_updates_per_tick / watched_count)
+    for surface_index in pairs(watched_surfaces) do
+        update_controllers_on_surface(surface_index, budget)
     end
 end
 
@@ -619,7 +670,8 @@ end)
 
 script.on_init(function ()
     storage.controllers = {}
-    storage.next_controller_unit_number = nil
+    storage.controllers_by_surface = {}
+    storage.next_controller_by_surface = {}
     storage.displays = {}
     storage.gui = {}
 

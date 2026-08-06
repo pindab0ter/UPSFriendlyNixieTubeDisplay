@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.1
+Date: 2026-08-06
+  Bugfixes:
+    - Fixed that a Nixie Tube showing a digit reported "is in the way" when a blueprint was pasted over it
+---------------------------------------------------------------------------------------------------
 Version: 0.4.0
 Date: 2026-07-14
   Features:

@@ -102,6 +102,9 @@ function common.digit_sprite_entity(name, icon, build_sprite)
         max_health                     = 1,
         order                          = "z[zebra]",
 
+        -- Collides with nothing
+        collision_mask                 = { layers = {} },
+
         energy_source                  = {
             type = "void",
             usage_priority = "secondary-input",

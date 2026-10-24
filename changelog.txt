@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.4.3
+Date: 2026-10-24
+  Translation:
+    - Added German, Dutch, Polish and Russian translations for the overflow notation setting
+---------------------------------------------------------------------------------------------------
 Version: 0.4.2
 Date: 2026-10-24
   Bugfixes:

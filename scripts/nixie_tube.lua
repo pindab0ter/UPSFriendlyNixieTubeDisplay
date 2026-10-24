@@ -169,7 +169,9 @@ end
 local function refresh_selected_signal(controller)
     local control_behavior = controller.entity.get_control_behavior() --[[@as LuaLampControlBehavior?]]
     local circuit_condition = control_behavior and control_behavior.circuit_condition
-    controller.selected_signal = circuit_condition and circuit_condition.first_signal or false
+    local signal = circuit_condition and circuit_condition.first_signal
+    -- A blank signal can still carry a type or quality, but get_signal requires a name
+    controller.selected_signal = signal and signal.name and signal or false
     controller.previous_value = nil
     update_chain_tooltips(controller)
 end
@@ -670,7 +672,7 @@ nixie_tube_gui.callbacks.on_nt_gui_elem_changed = function (self, event)
     end
 
     local controller = helpers.storage_set_controller(nixie_tube)
-    controller.selected_signal = signal or false
+    controller.selected_signal = signal and signal.name and signal or false
     controller.previous_value = nil
     update_chain_tooltips(controller)
 
